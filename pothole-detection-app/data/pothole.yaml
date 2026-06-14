@@ -1,0 +1,8 @@
+# Example YOLO dataset config for a single-class pothole dataset.
+# Update `path` to your dataset root.
+path: D:\path\to\dataset
+train: images/train
+val: images/val
+names:
+  0: pothole
+

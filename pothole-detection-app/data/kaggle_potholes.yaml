@@ -1,0 +1,7 @@
+# Use this if you place your dataset in `pothole-detection-app/datasets/kaggle_potholes/`
+path: datasets/kaggle_potholes
+train: images/train
+val: images/val
+names:
+  0: pothole
+
