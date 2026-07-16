@@ -1,0 +1,66 @@
+# ============================================================
+# CNN Baseline Configuration
+# ============================================================
+
+# --- Project ---
+project:
+  name: "cnn-pothole-baseline"
+  seed: 42
+  device: "cpu"                         # "cpu" or "cuda"
+
+# --- Dataset ---
+dataset:
+  source_dir: "../pothole-detection-app/datasets/kaggle_potholes"
+  processed_dir: "data/processed"
+  split_manifest: "data/split_manifest.json"
+  split_ratios:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  class_names:
+    - "normal"                          # label 0
+    - "pothole"                         # label 1
+
+# --- Preprocessing ---
+preprocessing:
+  image_size: 224                       # resize to 224x224
+  normalization: "imagenet"             # "imagenet" or "rescale"
+  color_mode: "rgb"
+
+# --- Augmentation (training only) ---
+augmentation:
+  horizontal_flip: true
+  rotation_range: 15                    # degrees
+  brightness_range: 0.2
+  contrast_range: 0.2
+  zoom_range: [0.80, 1.0]
+  fill_mode: "nearest"
+
+# --- Model ---
+model:
+  architecture: "MobileNetV2"           # MobileNetV2 | EfficientNetB0 | ResNet18
+  pretrained: true
+  freeze_backbone: true
+  dropout_rate: 0.5
+  num_classes: 2                        # 2 outputs (cross-entropy classification)
+
+# --- Training ---
+training:
+  epochs: 30
+  batch_size: 32
+  optimizer: "adam"
+  learning_rate: 0.001
+  fine_tune_learning_rate: 0.0001
+  early_stopping:
+    patience: 5
+    monitor: "val_loss"
+
+# --- Outputs ---
+outputs:
+  model_dir: "outputs/models"
+  plot_dir: "outputs/plots"
+  report_dir: "outputs/reports"
+  log_dir: "outputs/logs"
+  best_model_name: "best_model.pt"
+  final_model_name: "final_model.pt"
+  training_log: "training_history.csv"

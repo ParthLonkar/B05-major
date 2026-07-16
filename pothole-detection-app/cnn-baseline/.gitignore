@@ -1,0 +1,36 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Datasets
+data/processed/
+data/raw/
+
+# Model Weights (gitignored)
+outputs/models/*.pt
+outputs/models/*.pth
+outputs/models/archive/
+
+# Logs
+outputs/logs/*.log
+outputs/logs/cnn_baseline.log
+
+# IDE settings
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
