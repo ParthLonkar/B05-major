@@ -13,12 +13,8 @@ import torch
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.config import get_config
-from src.data.prepare import (
-    find_and_remove_duplicates,
-    perform_stratified_split,
-    copy_and_rename_splits,
-    save_manifest
-)
+from src.data.validator import DatasetValidator
+from src.data.splitter import DatasetSplitter
 
 # Setup logging
 logging.basicConfig(
@@ -97,36 +93,53 @@ def main() -> int:
         logger.error(e)
         return 1
 
-    # Source folders for classification classes: potholes vs normal
-    # We consolidate train and val folders from YOLO to get all available images
+    # Initialize validator
+    validator = DatasetValidator(source_dir)
+    if not validator.verify_existence():
+        logger.error("Dataset folder does not exist.")
+        return 1
+        
+    if not validator.validate_folder_structure():
+        logger.error("Incorrect dataset folder structure.")
+        return 1
+
+    # Scan directories
     image_folders = [
         ("pothole", source_dir / "images" / "train" / "potholes"),
         ("normal", source_dir / "images" / "train" / "normal"),
         ("pothole", source_dir / "images" / "val" / "potholes"),
     ]
 
-    logger.info("Scanning and loading raw dataset...")
-    # Find and deduplicate
-    try:
-        unique_image_paths = find_and_remove_duplicates(image_folders)
-    except Exception as e:
-        logger.error(f"Error during deduplication: {e}")
+    logger.info("Verifying image files and checking corruptions...")
+    valid_paths, corrupt_paths = validator.check_images(image_folders)
+    
+    if corrupt_paths:
+        logger.warning(f"Detected {len(corrupt_paths)} corrupted files. These will be skipped.")
+
+    if not valid_paths:
+        logger.error("No valid image files found in the source directories.")
         return 1
 
-    if not unique_image_paths:
-        logger.error("No image files found in the source dataset folders.")
-        return 1
+    logger.info("Scanning for duplicate images...")
+    unique_paths, duplicate_paths = validator.find_duplicates(valid_paths)
+    logger.info(f"Deduplication complete. Found {len(duplicate_paths)} duplicates. Keep={len(unique_paths)} unique files.")
 
-    # Split dataset
-    try:
-        train_paths, val_paths, test_paths = perform_stratified_split(
-            image_paths=unique_image_paths,
-            split_ratios=config.dataset["split_ratios"],
-            seed=seed
-        )
-    except Exception as e:
-        logger.error(f"Error during stratified splitting: {e}")
-        return 1
+    # Class distribution check
+    logger.info("Computing class distribution counts...")
+    validator.generate_distribution_report(unique_paths)
+
+    # Initialize splitter
+    split_ratios = config.dataset["split_ratios"]
+    splitter = DatasetSplitter(
+        train_ratio=split_ratios["train"],
+        val_ratio=split_ratios["val"],
+        test_ratio=split_ratios["test"],
+        seed=seed
+    )
+
+    # Perform stratified split
+    logger.info("Executing stratified train/val/test splits...")
+    train_paths, val_paths, test_paths = splitter.split(unique_paths)
 
     # Copy files and rename them
     processed_dir = project_root / config.dataset["processed_dir"]
@@ -138,7 +151,7 @@ def main() -> int:
 
     logger.info("Consolidating, renaming, and copying images into splits...")
     try:
-        manifest_paths = copy_and_rename_splits(
+        manifest_paths = splitter.copy_and_rename_splits(
             splits=splits,
             output_dir=processed_dir,
             class_names=config.dataset["class_names"]
@@ -150,12 +163,12 @@ def main() -> int:
     # Save manifest file
     manifest_data = {
         "seed": seed,
-        "split_ratios": config.dataset["split_ratios"],
+        "split_ratios": split_ratios,
         "splits": manifest_paths
     }
     manifest_file_path = project_root / config.dataset["split_manifest"]
     try:
-        save_manifest(manifest_data, manifest_file_path)
+        splitter.save_manifest(manifest_data, manifest_file_path)
     except Exception as e:
         logger.error(f"Failed to save manifest file: {e}")
         return 1

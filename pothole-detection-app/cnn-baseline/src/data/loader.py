@@ -1,85 +1,28 @@
-"""PyTorch Dataset and DataLoader loader modules."""
+"""PyTorch DataLoader utilities for pothole classification."""
 
 import logging
 from pathlib import Path
-from typing import List, Tuple
-from PIL import Image
-from torch.utils.data import Dataset, DataLoader
-from src.data.augmentation import get_train_transforms, get_val_test_transforms
+from typing import Tuple
+import torch
+from torch.utils.data import DataLoader
+from src.data.dataset import PotholeDataset
+from src.data.transforms import TransformsFactory
 
 logger = logging.getLogger(__name__)
 
 
-class PotholeDataset(Dataset):
-    """PyTorch Dataset for road surface pothole classification."""
-
-    def __init__(self, split_dir: Path, transform=None):
-        """
-        Args:
-            split_dir: Path to the split directory (e.g., data/processed/train).
-            transform: Optional transforms to apply to the images.
-        """
-        self.split_dir = Path(split_dir)
-        self.transform = transform
-        self.image_paths: List[Path] = []
-        self.labels: List[int] = []
-
-        if not self.split_dir.exists():
-            raise FileNotFoundError(f"Split directory not found: {self.split_dir}")
-
-        # Scan class subfolders
-        self.class_to_idx = {"normal": 0, "pothole": 1}
-        for class_name, idx in self.class_to_idx.items():
-            class_dir = self.split_dir / class_name
-            if not class_dir.exists():
-                logger.warning(f"Class folder not found in split: {class_dir}")
-                continue
-
-            for file_path in sorted(class_dir.glob("*")):
-                if file_path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
-                    self.image_paths.append(file_path)
-                    self.labels.append(idx)
-
-        logger.info(f"Loaded {len(self.image_paths)} images from {self.split_dir}")
-
-    def __len__(self) -> int:
-        return len(self.image_paths)
-
-    def __getitem__(self, idx: int) -> Tuple[object, int]:
-        image_path = self.image_paths[idx]
-        label = self.labels[idx]
-
-        try:
-            # Load and convert to RGB (handles RGBA, Grayscale, Palettized formats)
-            with Image.open(image_path) as img:
-                img_rgb = img.convert("RGB")
-                
-                # Apply transforms
-                if self.transform is not None:
-                    img_tensor = self.transform(img_rgb)
-                else:
-                    # Fallback to no transforms
-                    img_tensor = img_rgb
-
-            return img_tensor, label
-        except Exception as e:
-            logger.error(f"Error loading image {image_path}: {e}")
-            # Raise exception so training pipeline fails loudly on data issue
-            raise e
-
-
-def get_data_loaders(
+def build_data_loaders(
     processed_dir: str | Path,
     image_size: int = 224,
     batch_size: int = 32,
     num_workers: int = 0
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
-    """Create PyTorch DataLoader instances for train, validation, and test splits.
+    """Build PyTorch DataLoader objects for train, val, and test splits.
 
     Args:
-        processed_dir: Path to the processed datasets directory (e.g. data/processed).
-        image_size: Target image resizing dimension.
-        batch_size: Batch size for loaders.
+        processed_dir: Path to the processed directory containing splits.
+        image_size: Target dimension for resizing.
+        batch_size: Batch size.
         num_workers: Number of DataLoader parallel worker threads.
 
     Returns:
@@ -91,14 +34,23 @@ def get_data_loaders(
     val_dir = processed_dir / "val"
     test_dir = processed_dir / "test"
 
-    # Define transforms
-    train_transform = get_train_transforms(image_size)
-    val_test_transform = get_val_test_transforms(image_size)
+    # Instantiate transformation factories
+    factory = TransformsFactory(image_size)
+    train_transform = factory.get_train_transforms()
+    val_test_transform = factory.get_val_test_transforms()
 
-    # Build datasets
+    # Create PyTorch datasets
     train_dataset = PotholeDataset(train_dir, transform=train_transform)
     val_dataset = PotholeDataset(val_dir, transform=val_test_transform)
     test_dataset = PotholeDataset(test_dir, transform=val_test_transform)
+
+    # Determine optimization configs
+    cuda_available = torch.cuda.is_available()
+    pin_memory = cuda_available
+    persistent_workers = num_workers > 0
+
+    logger.info(f"DataLoader optimization: pin_memory={pin_memory}, "
+                f"persistent_workers={persistent_workers}, num_workers={num_workers}")
 
     # Build data loaders
     train_loader = DataLoader(
@@ -106,7 +58,8 @@ def get_data_loaders(
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     val_loader = DataLoader(
@@ -114,7 +67,8 @@ def get_data_loaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     test_loader = DataLoader(
@@ -122,7 +76,8 @@ def get_data_loaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     return train_loader, val_loader, test_loader
