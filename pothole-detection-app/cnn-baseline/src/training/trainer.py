@@ -37,6 +37,7 @@ from torch.utils.data import DataLoader
 from src.training.checkpoint import CheckpointManager
 from src.training.early_stopping import EarlyStopping
 from src.training.metrics import compute_metrics, save_history
+from src.training.visualization import generate_training_plots
 
 logger = logging.getLogger(__name__)
 
@@ -481,4 +482,12 @@ class Trainer:
                     break
 
         logger.info("Training complete.")
+
+        # --- Generate Visualization Plots ---
+        plot_dir = self._config.get("outputs", {}).get("plot_dir", "outputs/plots")
+        try:
+            generate_training_plots(self.history, plot_dir)
+        except Exception as e:
+            logger.error("Failed to generate training plots: %s", e)
+
         return self.history
