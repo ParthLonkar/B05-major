@@ -1,9 +1,10 @@
 """CLI entry-point for training the pothole classification CNN.
 
 Usage (from the cnn-baseline/ directory):
-    python -m scripts.train                       # uses default configs/config.yaml
-    python -m scripts.train --config path/to.yaml  # custom config
-    python -m scripts.train --epochs 5             # override epoch count
+    python -m scripts.train                                # uses default configs/config.yaml
+    python -m scripts.train --config path/to.yaml          # custom config
+    python -m scripts.train --epochs 5                     # override epoch count
+    python -m scripts.train --resume outputs/models/last_checkpoint.pth  # resume
 """
 
 from __future__ import annotations
@@ -53,6 +54,12 @@ def main() -> None:
         default=None,
         help="Override the epoch count in config.yaml.",
     )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Path to a checkpoint (.pth) to resume training from.",
+    )
     args = parser.parse_args()
 
     _setup_logging()
@@ -90,7 +97,7 @@ def main() -> None:
         summary["estimated_size_mb"],
     )
 
-    # ---- Train ----
+    # ---- Build Trainer ----
     trainer = Trainer(
         model=model,
         train_loader=train_loader,
@@ -98,6 +105,11 @@ def main() -> None:
         config=cfg.raw,
     )
 
+    # ---- Resume from checkpoint (if requested) ----
+    if args.resume:
+        trainer.resume(args.resume)
+
+    # ---- Train ----
     num_epochs = args.epochs  # None → Trainer uses config default
     history = trainer.fit(num_epochs=num_epochs)
 
@@ -107,6 +119,7 @@ def main() -> None:
     logger.info("  Last train_loss : %.4f", history["train_loss"][-1])
     logger.info("  Last val_loss   : %.4f", history["val_loss"][-1])
     logger.info("  Last val_acc    : %.2f%%", history["val_accuracy"][-1])
+    logger.info("  Last LR         : %.1e", history["learning_rate"][-1])
     logger.info("=" * 60)
 
 

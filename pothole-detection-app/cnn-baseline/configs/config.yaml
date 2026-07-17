@@ -53,7 +53,13 @@ training:
   fine_tune_learning_rate: 0.0001
   early_stopping:
     patience: 5
+    min_delta: 0.001                    # minimum loss decrease to count as improvement
     monitor: "val_loss"
+  scheduler:
+    type: "ReduceLROnPlateau"           # ReduceLROnPlateau | none
+    factor: 0.1                         # multiply LR by this factor on plateau
+    patience: 3                         # epochs to wait before reducing LR
+    min_lr: 0.000001                    # lower bound on learning rate
 
 # --- Outputs ---
 outputs:
@@ -61,6 +67,6 @@ outputs:
   plot_dir: "outputs/plots"
   report_dir: "outputs/reports"
   log_dir: "outputs/logs"
-  best_model_name: "best_model.pt"
-  final_model_name: "final_model.pt"
+  best_model_name: "best_model.pth"
+  last_checkpoint_name: "last_checkpoint.pth"
   training_log: "training_history.csv"
