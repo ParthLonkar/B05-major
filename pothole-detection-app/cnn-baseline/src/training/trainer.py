@@ -36,6 +36,7 @@ from torch.utils.data import DataLoader
 
 from src.training.checkpoint import CheckpointManager
 from src.training.early_stopping import EarlyStopping
+from src.training.metrics import compute_metrics, save_history
 
 logger = logging.getLogger(__name__)
 
@@ -131,10 +132,14 @@ class Trainer:
         )
 
         # ---- history tracking ----
-        self.history: Dict[str, List[float]] = {
+        self.history: Dict[str, List[Any]] = {
+            "epoch": [],
             "train_loss": [],
             "val_loss": [],
             "val_accuracy": [],
+            "val_precision": [],
+            "val_recall": [],
+            "val_f1": [],
             "learning_rate": [],
         }
 
@@ -243,6 +248,11 @@ class Trainer:
         prev_val_loss: float = float(ckpt.get("val_loss", float("inf")))
         self.checkpoint_mgr.best_val_loss = prev_val_loss
 
+        # Restore history if available
+        if "history" in ckpt:
+            self.history = ckpt["history"]
+            logger.info("Training history restored from checkpoint.")
+
         logger.info(
             "Training will resume from epoch %d  (previous val_loss=%.4f)",
             self.start_epoch,
@@ -300,19 +310,22 @@ class Trainer:
     # Validation epoch
     # ------------------------------------------------------------------
     @torch.no_grad()
-    def validate_one_epoch(self, epoch: int) -> tuple[float, float]:
+    def validate_one_epoch(self, epoch: int) -> Dict[str, float]:
         """Execute one full validation epoch (no gradient computation).
 
         Args:
             epoch: Current epoch number (1-indexed, used for logging only).
 
         Returns:
-            A tuple of (average_val_loss, val_accuracy_percentage).
+            Dict containing average validation loss, accuracy, precision,
+            recall, and f1 score.
         """
         self.model.eval()
         running_loss: float = 0.0
-        correct: int = 0
         total_samples: int = 0
+
+        all_labels = []
+        all_predictions = []
 
         for images, labels in self.val_loader:
             images = images.to(self.device)
@@ -326,11 +339,13 @@ class Trainer:
             total_samples += batch_size
 
             _, predicted = torch.max(outputs, dim=1)
-            correct += (predicted == labels).sum().item()
+            all_labels.extend(labels.cpu().numpy())
+            all_predictions.extend(predicted.cpu().numpy())
 
         avg_loss: float = running_loss / max(total_samples, 1)
-        accuracy: float = (correct / max(total_samples, 1)) * 100.0
-        return avg_loss, accuracy
+        metrics = compute_metrics(all_labels, all_predictions)
+        metrics["loss"] = avg_loss
+        return metrics
 
     # ------------------------------------------------------------------
     # Full training loop
@@ -376,12 +391,21 @@ class Trainer:
             train_loss: float = self.train_one_epoch(epoch)
 
             # --- Validate ---
-            val_loss, val_acc = self.validate_one_epoch(epoch)
+            val_metrics = self.validate_one_epoch(epoch)
+            val_loss = val_metrics["loss"]
+            val_acc = val_metrics["accuracy"]
+            val_precision = val_metrics["precision"]
+            val_recall = val_metrics["recall"]
+            val_f1 = val_metrics["f1"]
 
             # --- Record ---
+            self.history["epoch"].append(epoch)
             self.history["train_loss"].append(train_loss)
             self.history["val_loss"].append(val_loss)
             self.history["val_accuracy"].append(val_acc)
+            self.history["val_precision"].append(val_precision)
+            self.history["val_recall"].append(val_recall)
+            self.history["val_f1"].append(val_f1)
             self.history["learning_rate"].append(current_lr)
 
             elapsed: float = time.time() - epoch_start
@@ -389,12 +413,16 @@ class Trainer:
             logger.info("-" * 60)
             logger.info(
                 "Epoch %d/%d  |  train_loss=%.4f  |  val_loss=%.4f  |  "
-                "val_acc=%.2f%%  |  lr=%.1e  |  time=%.1fs",
+                "val_acc=%.2f%%  |  val_prec=%.2f%%  |  val_rec=%.2f%%  |  "
+                "val_f1=%.2f%%  |  lr=%.1e  |  time=%.1fs",
                 epoch,
                 end_epoch,
                 train_loss,
                 val_loss,
                 val_acc,
+                val_precision,
+                val_recall,
+                val_f1,
                 current_lr,
                 elapsed,
             )
@@ -410,6 +438,10 @@ class Trainer:
                         "Scheduler reduced LR: %.1e → %.1e", old_lr, new_lr
                     )
 
+            # --- Save Metrics History ---
+            metrics_dir = self._config.get("outputs", {}).get("metrics_dir", "outputs/metrics")
+            save_history(self.history, metrics_dir)
+
             # --- Checkpoint: always save last ---
             self.checkpoint_mgr.save_last(
                 model=self.model,
@@ -419,6 +451,7 @@ class Trainer:
                 val_loss=val_loss,
                 val_accuracy=val_acc,
                 config=self._config,
+                history=self.history,
             )
 
             # --- Checkpoint: save best if improved ---
@@ -430,6 +463,7 @@ class Trainer:
                 val_loss=val_loss,
                 val_accuracy=val_acc,
                 config=self._config,
+                history=self.history,
             )
 
             # --- Early stopping ---

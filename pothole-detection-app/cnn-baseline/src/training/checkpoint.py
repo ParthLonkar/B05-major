@@ -98,6 +98,7 @@ class CheckpointManager:
         val_loss: float,
         val_accuracy: float,
         config: Optional[Dict[str, Any]] = None,
+        history: Optional[Dict[str, List[Any]]] = None,
     ) -> Dict[str, Any]:
         """Assemble a checkpoint dictionary.
 
@@ -110,6 +111,7 @@ class CheckpointManager:
             val_accuracy: Validation accuracy at this epoch.
             config: Optional full training configuration dict.  Stored
                 as-is for reproducibility.  Skipped if ``None``.
+            history: Optional training history metrics dictionary.
 
         Returns:
             A dictionary ready for ``torch.save``.
@@ -127,6 +129,8 @@ class CheckpointManager:
             state["scheduler_state_dict"] = scheduler.state_dict()
         if config is not None:
             state["config"] = config
+        if history is not None:
+            state["history"] = history
         return state
 
     # ------------------------------------------------------------------
@@ -141,6 +145,7 @@ class CheckpointManager:
         val_loss: float,
         val_accuracy: float,
         config: Optional[Dict[str, Any]] = None,
+        history: Optional[Dict[str, List[Any]]] = None,
     ) -> Path:
         """Save the latest checkpoint (called every epoch).
 
@@ -152,13 +157,14 @@ class CheckpointManager:
             val_loss: Validation loss.
             val_accuracy: Validation accuracy (%).
             config: Optional training config dict for reproducibility.
+            history: Optional training history metrics dictionary.
 
         Returns:
             The path to the saved checkpoint file.
         """
         state = self._build_state(
             model, optimizer, scheduler, epoch, val_loss, val_accuracy,
-            config=config,
+            config=config, history=history,
         )
         path = self.save_dir / self.last_name
         torch.save(state, path)
@@ -176,6 +182,7 @@ class CheckpointManager:
         val_loss: float,
         val_accuracy: float,
         config: Optional[Dict[str, Any]] = None,
+        history: Optional[Dict[str, List[Any]]] = None,
     ) -> Path | None:
         """Save the best-model checkpoint if ``val_loss`` improved.
 
@@ -187,6 +194,7 @@ class CheckpointManager:
             val_loss: Validation loss.
             val_accuracy: Validation accuracy (%).
             config: Optional training config dict for reproducibility.
+            history: Optional training history metrics dictionary.
 
         Returns:
             The path to the saved best checkpoint, or ``None`` if this
@@ -197,7 +205,7 @@ class CheckpointManager:
             self.best_val_loss = val_loss
             state = self._build_state(
                 model, optimizer, scheduler, epoch, val_loss, val_accuracy,
-                config=config,
+                config=config, history=history,
             )
             path = self.save_dir / self.best_name
             torch.save(state, path)

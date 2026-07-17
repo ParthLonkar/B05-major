@@ -67,6 +67,7 @@ outputs:
   plot_dir: "outputs/plots"
   report_dir: "outputs/reports"
   log_dir: "outputs/logs"
+  metrics_dir: "outputs/metrics"
   best_model_name: "best_model.pth"
   last_checkpoint_name: "last_checkpoint.pth"
   training_log: "training_history.csv"

@@ -17,14 +17,12 @@ __pycache__/
 data/processed/
 data/raw/
 
-# Model Weights (gitignored)
-outputs/models/*.pt
-outputs/models/*.pth
-outputs/models/archive/
-
-# Logs
-outputs/logs/*.log
-outputs/logs/cnn_baseline.log
+# Outputs (gitignored)
+outputs/models/
+outputs/logs/
+outputs/metrics/
+outputs/plots/
+outputs/reports/
 
 # IDE settings
 .idea/
