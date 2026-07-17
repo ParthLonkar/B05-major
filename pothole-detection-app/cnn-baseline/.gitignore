@@ -23,6 +23,7 @@ outputs/logs/
 outputs/metrics/
 outputs/plots/
 outputs/reports/
+experiments/
 
 # IDE settings
 .idea/

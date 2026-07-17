@@ -65,9 +65,39 @@ def main() -> None:
     _setup_logging()
     logger = logging.getLogger(__name__)
 
-    # ---- Load configuration ----
-    cfg = get_config(args.config)
-    logger.info("Loaded configuration from: %s", args.config or "configs/config.yaml")
+    # ---- Setup Experiment Run ----
+    from datetime import datetime
+    import shutil
+
+    config_path = args.config or "configs/config.yaml"
+    cfg = get_config(config_path)
+
+    if args.resume:
+        resume_path = Path(args.resume).resolve()
+        # Grandparent directory of the checkpoint is the experiment run folder
+        run_dir = resume_path.parent.parent
+        run_id = run_dir.name
+        logger.info("Resuming training in existing experiment directory: %s", run_dir)
+    else:
+        run_id = f"run_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
+        run_dir = Path(_PROJECT_ROOT) / "experiments" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy configuration file for reproducibility
+        shutil.copy2(config_path, run_dir / "config.yaml")
+        logger.info("Created new experiment run directory: %s", run_dir)
+
+    # Add dynamic file handler to redirect logs to training.log in the run folder
+    file_handler = logging.FileHandler(run_dir / "training.log", encoding="utf-8")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s  [%(levelname)s]  %(name)s — %(message)s", datefmt="%H:%M:%S")
+    )
+    logging.getLogger().addHandler(file_handler)
+
+    # Override directories at runtime to point inside the run directory
+    cfg.raw["outputs"]["model_dir"] = str(run_dir / "models")
+    cfg.raw["outputs"]["plot_dir"] = str(run_dir / "plots")
+    cfg.raw["outputs"]["metrics_dir"] = str(run_dir / "metrics")
 
     # ---- Build data loaders ----
     processed_dir = Path(_PROJECT_ROOT) / cfg.dataset["processed_dir"]
