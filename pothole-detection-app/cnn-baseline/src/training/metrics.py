@@ -53,7 +53,10 @@ def compute_metrics(
 
 
 def save_history(
-    history: Dict[str, List[Any]], save_dir: str | Path, base_filename: str = "metrics"
+    history: Dict[str, List[Any]],
+    save_dir: str | Path,
+    base_filename: str = "metrics",
+    metadata: Dict[str, Any] | None = None,
 ) -> None:
     """Save training history metrics to both CSV and JSON formats.
 
@@ -61,6 +64,8 @@ def save_history(
         history: Dictionary containing training metrics lists.
         save_dir: Directory where the history files should be saved.
         base_filename: Base filename (without extension) for the files.
+        metadata: Optional dictionary of additional run metadata to include
+            in the JSON file.
     """
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -91,8 +96,13 @@ def save_history(
 
     # 2. Save to JSON
     try:
+        data_to_save: Dict[str, Any] = {"history": history}
+        if metadata is not None:
+            data_to_save.update(metadata)
+
         with open(json_path, mode="w", encoding="utf-8") as f:
-            json.dump(history, f, indent=2)
+            json.dump(data_to_save, f, indent=2)
         logger.info("Saved structured training history to JSON: %s", json_path)
     except Exception as e:
         logger.error("Failed to save training history to JSON: %s", e)
+

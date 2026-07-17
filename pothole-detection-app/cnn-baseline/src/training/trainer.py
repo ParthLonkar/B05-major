@@ -440,7 +440,11 @@ class Trainer:
 
             # --- Save Metrics History ---
             metrics_dir = self._config.get("outputs", {}).get("metrics_dir", "outputs/metrics")
-            save_history(self.history, metrics_dir)
+            metadata = {
+                "train_samples": len(self.train_loader.dataset),
+                "val_samples": len(self.val_loader.dataset),
+            }
+            save_history(self.history, metrics_dir, metadata=metadata)
 
             # --- Checkpoint: always save last ---
             self.checkpoint_mgr.save_last(
