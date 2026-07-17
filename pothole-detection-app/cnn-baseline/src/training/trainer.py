@@ -418,6 +418,7 @@ class Trainer:
                 epoch=epoch,
                 val_loss=val_loss,
                 val_accuracy=val_acc,
+                config=self._config,
             )
 
             # --- Checkpoint: save best if improved ---
@@ -428,6 +429,7 @@ class Trainer:
                 epoch=epoch,
                 val_loss=val_loss,
                 val_accuracy=val_acc,
+                config=self._config,
             )
 
             # --- Early stopping ---

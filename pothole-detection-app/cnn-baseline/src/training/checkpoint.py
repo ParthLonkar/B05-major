@@ -12,11 +12,16 @@ Each checkpoint stores:
   - current epoch number
   - validation loss
   - validation accuracy
+  - config snapshot (full training configuration dict)
+  - timestamp (ISO-8601 UTC)
+  - git_commit (short SHA, or ``"unknown"`` outside a repo)
 """
 
 from __future__ import annotations
 
 import logging
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -68,6 +73,22 @@ class CheckpointManager:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+    @staticmethod
+    def _get_git_commit() -> str:
+        """Return the short git commit hash, or ``'unknown'`` if unavailable."""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+        return "unknown"
+
     def _build_state(
         self,
         model: nn.Module,
@@ -76,6 +97,7 @@ class CheckpointManager:
         epoch: int,
         val_loss: float,
         val_accuracy: float,
+        config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Assemble a checkpoint dictionary.
 
@@ -86,6 +108,8 @@ class CheckpointManager:
             epoch: Current epoch number (1-indexed).
             val_loss: Validation loss at this epoch.
             val_accuracy: Validation accuracy at this epoch.
+            config: Optional full training configuration dict.  Stored
+                as-is for reproducibility.  Skipped if ``None``.
 
         Returns:
             A dictionary ready for ``torch.save``.
@@ -96,9 +120,13 @@ class CheckpointManager:
             "optimizer_state_dict": optimizer.state_dict(),
             "val_loss": val_loss,
             "val_accuracy": val_accuracy,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "git_commit": self._get_git_commit(),
         }
         if scheduler is not None:
             state["scheduler_state_dict"] = scheduler.state_dict()
+        if config is not None:
+            state["config"] = config
         return state
 
     # ------------------------------------------------------------------
@@ -112,6 +140,7 @@ class CheckpointManager:
         epoch: int,
         val_loss: float,
         val_accuracy: float,
+        config: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """Save the latest checkpoint (called every epoch).
 
@@ -122,12 +151,14 @@ class CheckpointManager:
             epoch: Current epoch (1-indexed).
             val_loss: Validation loss.
             val_accuracy: Validation accuracy (%).
+            config: Optional training config dict for reproducibility.
 
         Returns:
             The path to the saved checkpoint file.
         """
         state = self._build_state(
-            model, optimizer, scheduler, epoch, val_loss, val_accuracy
+            model, optimizer, scheduler, epoch, val_loss, val_accuracy,
+            config=config,
         )
         path = self.save_dir / self.last_name
         torch.save(state, path)
@@ -144,6 +175,7 @@ class CheckpointManager:
         epoch: int,
         val_loss: float,
         val_accuracy: float,
+        config: Optional[Dict[str, Any]] = None,
     ) -> Path | None:
         """Save the best-model checkpoint if ``val_loss`` improved.
 
@@ -154,6 +186,7 @@ class CheckpointManager:
             epoch: Current epoch (1-indexed).
             val_loss: Validation loss.
             val_accuracy: Validation accuracy (%).
+            config: Optional training config dict for reproducibility.
 
         Returns:
             The path to the saved best checkpoint, or ``None`` if this
@@ -163,7 +196,8 @@ class CheckpointManager:
             prev = self.best_val_loss
             self.best_val_loss = val_loss
             state = self._build_state(
-                model, optimizer, scheduler, epoch, val_loss, val_accuracy
+                model, optimizer, scheduler, epoch, val_loss, val_accuracy,
+                config=config,
             )
             path = self.save_dir / self.best_name
             torch.save(state, path)
