@@ -139,11 +139,12 @@ def test_resume_training() -> bool:
 
     history = trainer.fit(num_epochs=2)
 
-    if len(history["train_loss"]) == 2:
-        logger.info("✓  Trained for 2 resumed epochs correctly")
+    # History is restored and accumulated, so 3 initial + 2 resumed = 5 total entries.
+    if len(history["train_loss"]) == 5:
+        logger.info("✓  Trained for 2 resumed epochs correctly (total history size = 5)")
     else:
         logger.error(
-            "✗  Expected 2 history entries, got %d", len(history["train_loss"])
+            "✗  Expected 5 history entries, got %d", len(history["train_loss"])
         )
         ok = False
 
