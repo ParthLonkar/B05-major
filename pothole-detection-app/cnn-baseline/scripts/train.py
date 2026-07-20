@@ -79,13 +79,45 @@ def main() -> None:
         run_id = run_dir.name
         logger.info("Resuming training in existing experiment directory: %s", run_dir)
     else:
-        run_id = f"run_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
+        import json
+        suffix = ""
+        dataset_info_str = ""
+        stats_path = Path(_PROJECT_ROOT) / "outputs" / "metrics" / "integrated_dataset_statistics.json"
+        if stats_path.is_file():
+            suffix = "_dataset_merge_v1"
+            try:
+                with open(stats_path, "r", encoding="utf-8") as fh:
+                    stats = json.load(fh)
+                dataset_info_str = (
+                    "Dataset Information\n"
+                    "-------------------\n"
+                    "Dataset Version: Dataset Merge V1\n"
+                    f"Total Images: {stats['overall']['total_images']:,}\n"
+                    f"Training Images: {stats['final_distribution']['train']['total']:,}\n"
+                    f"Validation Images: {stats['final_distribution']['val']['total']:,}\n"
+                    f"Test Images: {stats['final_distribution']['test']['total']:,}\n"
+                    f"Positive Class: {stats['overall']['pothole_images']:,}\n"
+                    f"Negative Class: {stats['overall']['normal_images']:,}\n"
+                    "Source Datasets:\n"
+                    "  - Kaggle Potholes\n"
+                    "  - RDD2022"
+                )
+            except Exception as e:
+                logger.warning("Failed to parse integrated dataset statistics: %s", e)
+                
+        run_id = f"run_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}{suffix}"
         run_dir = Path(_PROJECT_ROOT) / "experiments" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         
         # Copy configuration file for reproducibility
         shutil.copy2(config_path, run_dir / "config.yaml")
         logger.info("Created new experiment run directory: %s", run_dir)
+        
+        # Save and log dataset info if available
+        if dataset_info_str:
+            with open(run_dir / "dataset_info.txt", "w", encoding="utf-8") as fh:
+                fh.write(dataset_info_str + "\n")
+            logger.info("\n============================================================\n" + dataset_info_str + "\n============================================================\n")
 
     # Add dynamic file handler to redirect logs to training.log in the run folder
     file_handler = logging.FileHandler(run_dir / "training.log", encoding="utf-8")
