@@ -6,9 +6,12 @@ Provides a self-contained ``TestEvaluator`` class that:
    run directory.
 2. Builds or accepts a test ``DataLoader``.
 3. Runs a single forward pass over the entire test set in ``torch.no_grad()``
-   evaluation mode, collecting predictions and computing test loss.
+   evaluation mode, collecting predictions **and softmax probabilities**, and
+   computing test loss.
 4. Delegates metric computation to ``src.evaluation.metrics``.
-5. Persists a structured ``evaluation_summary.json`` inside the experiment
+5. Generates evaluation artifacts (confusion matrix plot, ROC curve plot,
+   classification report text).
+6. Persists a structured ``evaluation_summary.json`` inside the experiment
    run directory (under an ``evaluation/`` subdirectory).
 
 Design notes
@@ -33,9 +36,18 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from src.evaluation.metrics import compute_test_metrics
+from src.evaluation.metrics import (
+    compute_confusion_values,
+    compute_roc_auc,
+    compute_test_metrics,
+    generate_classification_report,
+)
+from src.evaluation.visualization import plot_confusion_matrix, plot_roc_curve
 
 logger = logging.getLogger(__name__)
+
+# Default class names matching label encoding: 0 = Normal, 1 = Pothole
+_DEFAULT_CLASS_NAMES: List[str] = ["Normal", "Pothole"]
 
 
 class TestEvaluator:
@@ -48,6 +60,9 @@ class TestEvaluator:
         test_loader: DataLoader for the test split.
         checkpoint_path: Path to the loaded checkpoint file.
         results: Dictionary of evaluation results (populated after ``run``).
+        all_labels: Ground-truth labels collected during ``run()``.
+        all_preds: Predicted labels collected during ``run()``.
+        all_probs: Positive-class probabilities collected during ``run()``.
     """
 
     def __init__(
@@ -55,6 +70,7 @@ class TestEvaluator:
         model: nn.Module,
         test_loader: DataLoader,
         device: torch.device | str = "cpu",
+        class_names: List[str] | None = None,
     ) -> None:
         """Initialise the evaluator.
 
@@ -63,13 +79,21 @@ class TestEvaluator:
                 with the same forward signature).
             test_loader: ``DataLoader`` for the held-out test split.
             device: Torch device string or object (``"cpu"`` / ``"cuda"``).
+            class_names: Human-readable class names for reports and plots.
+                Defaults to ``["Normal", "Pothole"]``.
         """
         self.device: torch.device = torch.device(device)
         self.model: nn.Module = model.to(self.device)
         self.test_loader: DataLoader = test_loader
         self.criterion: nn.Module = nn.CrossEntropyLoss()
         self.checkpoint_path: Optional[Path] = None
+        self.class_names: List[str] = class_names or _DEFAULT_CLASS_NAMES
         self.results: Dict[str, Any] = {}
+
+        # Raw prediction arrays — populated by run()
+        self.all_labels: List[int] = []
+        self.all_preds: List[int] = []
+        self.all_probs: List[float] = []
 
         logger.info(
             "TestEvaluator initialised  |  device=%s  |  test_samples=%d",
@@ -129,6 +153,10 @@ class TestEvaluator:
         The model is placed in ``eval()`` mode and all computation happens
         inside a ``torch.no_grad()`` context to disable gradient tracking.
 
+        In addition to predicted labels, this method collects **softmax
+        probabilities** for the positive class (index 1), which are needed
+        for ROC-AUC computation and the ROC curve plot.
+
         Returns:
             A dictionary containing:
                 - ``test_loss`` (float): Average CrossEntropy loss.
@@ -136,17 +164,19 @@ class TestEvaluator:
                 - ``precision`` (float): % precision.
                 - ``recall`` (float): % recall.
                 - ``f1`` (float): % F1 score.
+                - ``roc_auc`` (float): ROC-AUC score (0–1).
+                - ``confusion_matrix`` (dict): TP, TN, FP, FN counts.
                 - ``num_samples`` (int): Number of test images evaluated.
-                - ``inference_time_seconds`` (float): Wall-clock time for
-                  the complete forward pass.
+                - ``inference_time_seconds`` (float): Wall-clock time.
                 - ``checkpoint`` (str): Name of the loaded checkpoint file.
                 - ``timestamp`` (str): ISO-8601 UTC timestamp.
         """
         self.model.eval()
         logger.info("Starting test evaluation (%d batches)…", len(self.test_loader))
 
-        all_labels: List[int] = []
-        all_preds: List[int] = []
+        self.all_labels = []
+        self.all_preds = []
+        self.all_probs = []
         running_loss: float = 0.0
         num_batches: int = 0
 
@@ -163,16 +193,23 @@ class TestEvaluator:
                 running_loss += loss.item()
                 num_batches += 1
 
+                # Predicted class labels
                 preds = torch.argmax(logits, dim=1)
-                all_labels.extend(labels.cpu().tolist())
-                all_preds.extend(preds.cpu().tolist())
+                self.all_labels.extend(labels.cpu().tolist())
+                self.all_preds.extend(preds.cpu().tolist())
+
+                # Softmax probabilities for the positive class (index 1)
+                probs = torch.softmax(logits, dim=1)[:, 1]
+                self.all_probs.extend(probs.cpu().tolist())
 
         elapsed = time.perf_counter() - start_time
 
         avg_test_loss = running_loss / max(num_batches, 1)
 
         # Delegate metric computation to the evaluation metrics module
-        metrics = compute_test_metrics(all_labels, all_preds)
+        metrics = compute_test_metrics(self.all_labels, self.all_preds)
+        roc_auc = compute_roc_auc(self.all_labels, self.all_probs)
+        cm_values = compute_confusion_values(self.all_labels, self.all_preds)
 
         self.results = {
             "test_loss": round(avg_test_loss, 6),
@@ -180,7 +217,9 @@ class TestEvaluator:
             "precision": metrics["precision"],
             "recall": metrics["recall"],
             "f1": metrics["f1"],
-            "num_samples": len(all_labels),
+            "roc_auc": roc_auc,
+            "confusion_matrix": cm_values,
+            "num_samples": len(self.all_labels),
             "inference_time_seconds": round(elapsed, 4),
             "checkpoint": self.checkpoint_path.name if self.checkpoint_path else "N/A",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -189,17 +228,83 @@ class TestEvaluator:
         logger.info(
             "Test evaluation complete  |  loss=%.4f  |  accuracy=%.2f%%  |  "
             "precision=%.2f%%  |  recall=%.2f%%  |  f1=%.2f%%  |  "
-            "samples=%d  |  time=%.2fs",
+            "roc_auc=%.4f  |  samples=%d  |  time=%.2fs",
             self.results["test_loss"],
             self.results["accuracy"],
             self.results["precision"],
             self.results["recall"],
             self.results["f1"],
+            self.results["roc_auc"],
             self.results["num_samples"],
             self.results["inference_time_seconds"],
         )
 
         return self.results
+
+    # ------------------------------------------------------------------
+    # Artifact generation
+    # ------------------------------------------------------------------
+    def generate_artifacts(self, output_dir: str | Path) -> Dict[str, Path]:
+        """Generate all evaluation artifacts (plots + classification report).
+
+        Must be called **after** ``run()`` so that prediction arrays are
+        populated.
+
+        Produces:
+            - ``confusion_matrix.png``
+            - ``roc_curve.png``
+            - ``classification_report.txt``
+
+        Args:
+            output_dir: Directory where artifacts are saved.
+
+        Returns:
+            Dictionary mapping artifact names to their saved file paths.
+
+        Raises:
+            RuntimeError: If ``run()`` has not been called yet.
+        """
+        if not self.all_labels:
+            raise RuntimeError(
+                "No prediction data available. Call run() before generate_artifacts()."
+            )
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        artifacts: Dict[str, Path] = {}
+
+        # 1. Confusion matrix plot
+        artifacts["confusion_matrix"] = plot_confusion_matrix(
+            y_true=self.all_labels,
+            y_pred=self.all_preds,
+            class_names=self.class_names,
+            save_dir=output_dir,
+        )
+
+        # 2. ROC curve plot
+        roc_auc = self.results.get("roc_auc", 0.0)
+        artifacts["roc_curve"] = plot_roc_curve(
+            y_true=self.all_labels,
+            y_prob=self.all_probs,
+            roc_auc=roc_auc,
+            save_dir=output_dir,
+        )
+
+        # 3. Classification report text file
+        artifacts["classification_report"] = generate_classification_report(
+            y_true=self.all_labels,
+            y_pred=self.all_preds,
+            class_names=self.class_names,
+            save_dir=output_dir,
+        )
+
+        logger.info(
+            "Generated %d evaluation artifacts in: %s",
+            len(artifacts),
+            output_dir,
+        )
+        return artifacts
 
     # ------------------------------------------------------------------
     # Persistence

@@ -211,11 +211,15 @@ def main() -> None:
     # ---- Run evaluation ----
     results = evaluator.run()
 
-    # ---- Save results ----
+    # ---- Generate artifacts (plots + classification report) ----
     eval_output_dir = run_dir / "evaluation"
+    artifacts = evaluator.generate_artifacts(eval_output_dir)
+
+    # ---- Save results (evaluation_summary.json) ----
     json_path = evaluator.save_results(eval_output_dir)
 
     # ---- Final summary ----
+    cm = results.get("confusion_matrix", {})
     logger.info("=" * 60)
     logger.info("EVALUATION COMPLETE")
     logger.info("  Test Loss     : %.4f", results["test_loss"])
@@ -223,9 +227,20 @@ def main() -> None:
     logger.info("  Precision     : %.2f%%", results["precision"])
     logger.info("  Recall        : %.2f%%", results["recall"])
     logger.info("  F1 Score      : %.2f%%", results["f1"])
+    logger.info("  ROC-AUC       : %.4f", results.get("roc_auc", 0.0))
+    logger.info(
+        "  Confusion     : TP=%d  TN=%d  FP=%d  FN=%d",
+        cm.get("TP", 0),
+        cm.get("TN", 0),
+        cm.get("FP", 0),
+        cm.get("FN", 0),
+    )
     logger.info("  Samples       : %d", results["num_samples"])
     logger.info("  Inference Time: %.2fs", results["inference_time_seconds"])
     logger.info("  Results saved : %s", json_path)
+    logger.info("  Artifacts     :")
+    for name, path in artifacts.items():
+        logger.info("    %s → %s", name, path.name)
     logger.info("=" * 60)
 
 
