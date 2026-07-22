@@ -60,6 +60,12 @@ def main() -> None:
         default=None,
         help="Path to a checkpoint (.pth) to resume training from.",
     )
+    parser.add_argument(
+        "--run_id",
+        type=str,
+        default=None,
+        help="Explicitly name the experiment run directory.",
+    )
     args = parser.parse_args()
 
     _setup_logging()
@@ -105,7 +111,10 @@ def main() -> None:
             except Exception as e:
                 logger.warning("Failed to parse integrated dataset statistics: %s", e)
                 
-        run_id = f"run_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}{suffix}"
+        if args.run_id:
+            run_id = args.run_id
+        else:
+            run_id = f"run_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}{suffix}"
         run_dir = Path(_PROJECT_ROOT) / "experiments" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         
