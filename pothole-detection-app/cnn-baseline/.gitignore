@@ -33,3 +33,7 @@ experiments/
 *.njsproj
 *.sln
 *.swp
+
+data/processed_npy_cache/
+scratch/
+test_npy/

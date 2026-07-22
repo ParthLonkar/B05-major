@@ -6,7 +6,7 @@
 project:
   name: "cnn-pothole-baseline"
   seed: 42
-  device: "cpu"                         # "cpu" or "cuda"
+  device: "cuda"                         # "cpu" or "cuda"
 
 # --- Dataset ---
 dataset:
