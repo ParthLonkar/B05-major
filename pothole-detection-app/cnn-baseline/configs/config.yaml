@@ -1,0 +1,73 @@
+# ============================================================
+# CNN Baseline Configuration
+# ============================================================
+
+# --- Project ---
+project:
+  name: "cnn-pothole-baseline"
+  seed: 42
+  device: "cuda"                         # "cpu" or "cuda"
+
+# --- Dataset ---
+dataset:
+  source_dir: "../pothole-detection-app/datasets/kaggle_potholes"
+  processed_dir: "data/processed"
+  split_manifest: "data/split_manifest.json"
+  split_ratios:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  class_names:
+    - "normal"                          # label 0
+    - "pothole"                         # label 1
+
+# --- Preprocessing ---
+preprocessing:
+  image_size: 224                       # resize to 224x224
+  normalization: "imagenet"             # "imagenet" or "rescale"
+  color_mode: "rgb"
+
+# --- Augmentation (training only) ---
+augmentation:
+  horizontal_flip: true
+  rotation_range: 15                    # degrees
+  brightness_range: 0.2
+  contrast_range: 0.2
+  zoom_range: [0.80, 1.0]
+  fill_mode: "nearest"
+
+# --- Model ---
+model:
+  architecture: "MobileNetV2"           # MobileNetV2 | EfficientNetB0 | ResNet18
+  pretrained: true
+  freeze_backbone: true
+  dropout_rate: 0.5
+  num_classes: 2                        # 2 outputs (cross-entropy classification)
+
+# --- Training ---
+training:
+  epochs: 30
+  batch_size: 32
+  optimizer: "adam"
+  learning_rate: 0.001
+  fine_tune_learning_rate: 0.0001
+  early_stopping:
+    patience: 5
+    min_delta: 0.001                    # minimum loss decrease to count as improvement
+    monitor: "val_loss"
+  scheduler:
+    type: "ReduceLROnPlateau"           # ReduceLROnPlateau | none
+    factor: 0.1                         # multiply LR by this factor on plateau
+    patience: 3                         # epochs to wait before reducing LR
+    min_lr: 0.000001                    # lower bound on learning rate
+
+# --- Outputs ---
+outputs:
+  model_dir: "outputs/models"
+  plot_dir: "outputs/plots"
+  report_dir: "outputs/reports"
+  log_dir: "outputs/logs"
+  metrics_dir: "outputs/metrics"
+  best_model_name: "best_model.pth"
+  last_checkpoint_name: "last_checkpoint.pth"
+  training_log: "training_history.csv"

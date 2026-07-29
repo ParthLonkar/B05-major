@@ -1,0 +1,39 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Datasets
+data/processed/
+data/raw/
+
+# Outputs (gitignored)
+outputs/models/
+outputs/logs/
+outputs/metrics/
+outputs/plots/
+outputs/reports/
+experiments/
+
+# IDE settings
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+data/processed_npy_cache/
+scratch/
+test_npy/

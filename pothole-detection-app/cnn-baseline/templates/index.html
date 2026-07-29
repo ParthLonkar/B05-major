@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pothole Detection Baseline | CNN Classifier</title>
+    <!-- Import Outfit Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Modern CSS variables for curated dark-theme palette */
+        :root {
+            --bg-base: #0b0c10;
+            --bg-surface: rgba(31, 40, 51, 0.45);
+            --bg-card: rgba(26, 32, 44, 0.7);
+            --border-color: rgba(102, 252, 241, 0.25);
+            --border-glow: rgba(102, 252, 241, 0.5);
+            --text-primary: #f5f6f8;
+            --text-secondary: #c5c6c7;
+            --accent: #66fcf1;
+            --accent-hover: #45f3e5;
+            --accent-dim: rgba(102, 252, 241, 0.15);
+            --accent-pothole: #ff5252;
+            --accent-normal: #2ecc71;
+            --font-main: 'Outfit', sans-serif;
+            --shadow-glow: 0 8px 32px 0 rgba(102, 252, 241, 0.15);
+            --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(102, 252, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 82, 82, 0.03) 0%, transparent 40%);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(197, 198, 199, 0.08);
+            background: rgba(11, 12, 16, 0.85);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 span {
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(102, 252, 241, 0.3);
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: var(--accent-dim);
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Container Layout */
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 1.5rem 1rem;
+            }
+        }
+
+        /* Card / Glassmorphism panel styling */
+        .panel {
+            background: var(--bg-surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 16px;
+            border: 1px solid rgba(197, 198, 199, 0.1);
+            padding: 2rem;
+            box-shadow: var(--shadow-glow);
+            transition: var(--transition-smooth);
+        }
+
+        .panel:hover {
+            border-color: rgba(102, 252, 241, 0.18);
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent);
+            padding-left: 10px;
+        }
+
+        /* Upload Area Styling */
+        .upload-area {
+            border: 2px dashed rgba(197, 198, 199, 0.2);
+            border-radius: 12px;
+            padding: 3rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            background: rgba(11, 12, 16, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover, .upload-area.drag-over {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+            box-shadow: 0 0 15px rgba(102, 252, 241, 0.08);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            transition: var(--transition-smooth);
+        }
+
+        .upload-area:hover .upload-icon {
+            transform: translateY(-5px);
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .upload-text strong {
+            color: var(--accent);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Image Preview styling */
+        .preview-container {
+            margin-top: 1.5rem;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(197, 198, 199, 0.1);
+        }
+
+        .preview-img {
+            width: 100%;
+            max-height: 350px;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Status info list */
+        .info-list {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            background: rgba(11, 12, 16, 0.3);
+            border: 1px solid rgba(197, 198, 199, 0.05);
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Submit Button */
+        .btn-predict {
+            display: block;
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: var(--bg-base);
+            font-family: var(--font-main);
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-predict:hover:not(:disabled) {
+            background: var(--accent-hover);
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-predict:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-predict:disabled {
+            background: rgba(197, 198, 199, 0.15);
+            color: rgba(197, 198, 199, 0.4);
+            cursor: not-allowed;
+        }
+
+        /* Prediction Result Panel styles */
+        .placeholder-results {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            min-height: 350px;
+            color: var(--text-secondary);
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .placeholder-icon {
+            font-size: 4rem;
+            opacity: 0.25;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .results-container {
+            display: none;
+        }
+
+        .prediction-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 1px solid rgba(197, 198, 199, 0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .pred-label {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(255, 82, 82, 0.1);
+        }
+
+        .pred-label.pothole {
+            color: var(--accent-pothole);
+        }
+
+        .pred-label.normal {
+            color: var(--accent-normal);
+        }
+
+        /* Confidence Progress bar */
+        .metric-title {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar-bg {
+            height: 10px;
+            border-radius: 50px;
+            background: rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 50px;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-bar-fill.pothole {
+            background: linear-gradient(90deg, var(--accent-pothole), #ff7b7b);
+            box-shadow: 0 0 8px var(--accent-pothole);
+        }
+
+        .progress-bar-fill.normal {
+            background: linear-gradient(90deg, var(--accent-normal), #55efc4);
+            box-shadow: 0 0 8px var(--accent-normal);
+        }
+
+        /* Spinner Loader */
+        .spinner {
+            display: none;
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(102, 252, 241, 0.25);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 1.5rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(197, 198, 199, 0.05);
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <h1>Pothole AI <span>Classifier</span></h1>
+            <div class="badge">CNN Baseline Demo</div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Panel: Upload Image & Preview -->
+        <section class="panel">
+            <h2>Select Image Input</h2>
+            
+            <div class="upload-area" id="drop-zone">
+                <span class="upload-icon">📷</span>
+                <p class="upload-text">Drag and drop your image file here or <strong>browse files</strong></p>
+                <input type="file" id="file-input" accept="image/*">
+            </div>
+
+            <div class="preview-container" id="preview-box">
+                <img id="preview" class="preview-img" alt="Image preview">
+            </div>
+
+            <div class="info-list" id="file-info-box" style="display: none;">
+                <div class="info-item">
+                    <span class="info-label">File name</span>
+                    <span class="info-value" id="info-filename">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Size</span>
+                    <span class="info-value" id="info-filesize">-</span>
+                </div>
+            </div>
+
+            <button class="btn-predict" id="predict-btn" disabled>Classify Image</button>
+            <div class="spinner" id="loading-spinner"></div>
+        </section>
+
+        <!-- Right Panel: Inference Outputs -->
+        <section class="panel" id="results-panel">
+            <h2>Classification Output</h2>
+
+            <!-- Placeholder before run -->
+            <div class="placeholder-results" id="placeholder-box">
+                <div class="placeholder-icon">👁️</div>
+                <p>Upload and classify an image to inspect real-time inference statistics.</p>
+            </div>
+
+            <!-- Real outputs -->
+            <div class="results-container" id="results-box">
+                <div class="prediction-hero">
+                    <span class="info-label" style="text-transform: uppercase; letter-spacing: 1px;">Model Classification</span>
+                    <span class="pred-label" id="res-class">-</span>
+                </div>
+
+                <div class="metric-title">
+                    <span>Prediction Confidence</span>
+                    <span id="res-confidence">-</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="res-progress"></div>
+                </div>
+
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Inference Latency</span>
+                        <span class="info-value" id="res-latency" style="color: var(--accent); font-weight: 600;">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Normal Class Prob.</span>
+                        <span class="info-value" id="res-prob-normal">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Pothole Class Prob.</span>
+                        <span class="info-value" id="res-prob-pothole">-</span>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 0.8rem; font-size: 1.1rem; color: var(--text-primary);">Classifier Context</h3>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Architecture</span>
+                        <span class="info-value">{{ checkpoint_info.model_architecture or "Unknown" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Checkpoint File</span>
+                        <span class="info-value">{{ checkpoint_info.checkpoint_name or "None" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Device</span>
+                        <span class="info-value" style="text-transform: uppercase;">{{ checkpoint_info.device or "CPU" }}</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 B05 Major Pothole Detection | CNN Binary Classification Baseline Dashboard</p>
+    </footer>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const predictBtn = document.getElementById('predict-btn');
+        const previewBox = document.getElementById('preview-box');
+        const previewImg = document.getElementById('preview');
+        const fileInfoBox = document.getElementById('file-info-box');
+        const infoFilename = document.getElementById('info-filename');
+        const infoFilesize = document.getElementById('info-filesize');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        const placeholderBox = document.getElementById('placeholder-box');
+        const resultsBox = document.getElementById('results-box');
+        
+        const resClass = document.getElementById('res-class');
+        const resConfidence = document.getElementById('res-confidence');
+        const resProgress = document.getElementById('res-progress');
+        const resLatency = document.getElementById('res-latency');
+        const resProbNormal = document.getElementById('res-prob-normal');
+        const resProbPothole = document.getElementById('res-prob-pothole');
+
+        let selectedFile = null;
+
+        // Trigger file browser on click
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // File drag and drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file (PNG, JPG, JPEG).');
+                return;
+            }
+            selectedFile = file;
+
+            // Render Preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewBox.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Set file meta values
+            infoFilename.textContent = file.name;
+            infoFilesize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+            fileInfoBox.style.display = 'flex';
+
+            // Enable action button
+            predictBtn.disabled = false;
+        }
+
+        // Action prediction triggering
+        predictBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            // Setup state
+            predictBtn.disabled = true;
+            loadingSpinner.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    alert('Prediction Error: ' + (data.error || 'Server error occurred.'));
+                }
+            } catch (err) {
+                alert('Connection failure: ' + err.message);
+            } finally {
+                loadingSpinner.style.display = 'none';
+                predictBtn.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            // Swap boxes
+            placeholderBox.style.display = 'none';
+            resultsBox.style.display = 'block';
+
+            // Update Class Labels
+            resClass.textContent = data.predicted_class;
+            resClass.className = 'pred-label ' + data.predicted_class;
+
+            // Confidence & progress animations
+            const confPercent = (data.confidence * 100).toFixed(2) + '%';
+            resConfidence.textContent = confPercent;
+            
+            resProgress.className = 'progress-bar-fill ' + data.predicted_class;
+            resProgress.style.width = confPercent;
+
+            // Latency
+            resLatency.textContent = data.inference_time_ms.toFixed(1) + ' ms';
+
+            // Class distributions
+            resProbNormal.textContent = (data.class_probabilities.normal * 100).toFixed(2) + '%';
+            resProbPothole.textContent = (data.class_probabilities.pothole * 100).toFixed(2) + '%';
+        }
+    </script>
+</body>
+</html>
