@@ -32,7 +32,6 @@
         android:extractNativeLibs="true"
         android:label="PotholeDetector"
         android:supportsRtl="true"
-        android:testOnly="true"
         android:theme="@style/Theme.PotholeDetector"
         android:usesCleartextTraffic="true" >
         <activity

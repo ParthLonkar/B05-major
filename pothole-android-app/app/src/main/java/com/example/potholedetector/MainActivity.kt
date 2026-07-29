@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
@@ -61,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.potholedetector.camera.CameraCaptureSheet
+import com.example.potholedetector.ui.screens.HomeDashboardScreen
+import com.example.potholedetector.ui.screens.LoginScreen
 import java.io.File
 
 import androidx.compose.material3.Surface
@@ -101,16 +104,31 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(vm)
+                    PotholeApp(vm)
                 }
             }
         }
     }
 }
 
+private enum class AppScreen { LOGIN, HOME, DETECTOR }
+
+@Composable
+private fun PotholeApp(vm: MainViewModel) {
+    var currentScreen by remember { mutableStateOf(AppScreen.LOGIN) }
+    when (currentScreen) {
+        AppScreen.LOGIN -> LoginScreen { _, _ -> currentScreen = AppScreen.HOME }
+        AppScreen.HOME -> HomeDashboardScreen(
+            onDetectPotholeClick = { currentScreen = AppScreen.DETECTOR },
+            onUploadImageClick = { currentScreen = AppScreen.DETECTOR }
+        )
+        AppScreen.DETECTOR -> DetectionScreen(vm, onBack = { currentScreen = AppScreen.HOME })
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainScreen(vm: MainViewModel) {
+private fun DetectionScreen(vm: MainViewModel, onBack: () -> Unit) {
     val state by vm.state.collectAsState()
     val context = LocalContext.current
 
@@ -147,7 +165,12 @@ private fun MainScreen(vm: MainViewModel) {
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Pothole Guard", fontWeight = FontWeight.Bold) },
+                title = { Text("Pothole Detection", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    androidx.compose.material3.IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to Home")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
