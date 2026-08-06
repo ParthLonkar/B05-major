@@ -14,16 +14,32 @@ interface GoogleMapsHeatmapProps {
 
 const getMarkerColor = (status: string): string => {
   switch (status) {
-    case 'Completed':
-      return '#22c55e';
-    case 'In Progress':
-      return '#eab308';
-    case 'Assigned':
-      return '#3b82f6';
+    case 'Done':
+      return '#00ff00'; // Bright Neon Green - highly visible
+    case 'Under Construction':
+      return '#fbbf24'; // Bright Yellow
+    case 'Progressed':
+      return '#60a5fa'; // Light Blue
     case 'Pending':
     default:
-      return '#ef4444';
+      return '#f87171'; // Light Red
   }
+};
+
+const getMarkerOpacity = (status: string): number => {
+  // Make Done status highly visible with full opacity
+  return status === 'Done' ? 1.0 : 0.85;
+};
+
+const getMarkerWeight = (status: string): number => {
+  // Make Done status have a much thicker border
+  return status === 'Done' ? 4 : 2;
+};
+
+const getMarkerRadius = (status: string, baseSeverity: string): number => {
+  const severityBonus = baseSeverity === 'Critical' ? 4 : baseSeverity === 'High' ? 2 : 0;
+  // Make Done markers larger
+  return status === 'Done' ? 12 + severityBonus : 8 + severityBonus;
 };
 
 const getMapCenter = (complaints: Complaint[]) => {
@@ -103,31 +119,39 @@ export const GoogleMapsHeatmap: React.FC<GoogleMapsHeatmapProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds complaints={filteredComplaints} />
-        {filteredComplaints.map((complaint) => (
-          <CircleMarker
-            key={complaint.id}
-            center={[complaint.latitude, complaint.longitude]}
-            radius={8 + (complaint.severity === 'Critical' ? 4 : complaint.severity === 'High' ? 2 : 0)}
-            pathOptions={{
-              color: getMarkerColor(complaint.status),
-              fillColor: getMarkerColor(complaint.status),
-              fillOpacity: 0.8,
-              weight: 2,
-            }}
-            eventHandlers={{
-              click: () => onMarkerClick?.(complaint),
-            }}
-          >
-            <Popup>
-              <div className="max-w-xs space-y-2 text-sm text-slate-700">
-                <div className="font-semibold text-slate-900">{complaint.complaintId}</div>
-                <div className="text-xs uppercase tracking-wide text-slate-500">{complaint.category}</div>
-                <div className="text-slate-600">{complaint.address}</div>
-                <div className="text-slate-600">{complaint.description}</div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
+        {filteredComplaints.map((complaint) => {
+          const markerColor = getMarkerColor(complaint.status);
+          const markerRadius = getMarkerRadius(complaint.status, complaint.severity);
+          
+          return (
+            <CircleMarker
+              key={complaint.id}
+              center={[complaint.latitude, complaint.longitude]}
+              radius={markerRadius}
+              pathOptions={{
+                color: complaint.status === 'Done' ? '#00cc00' : markerColor, // Darker green border for Done
+                fillColor: markerColor,
+                fillOpacity: getMarkerOpacity(complaint.status),
+                weight: getMarkerWeight(complaint.status),
+              }}
+              eventHandlers={{
+                click: () => onMarkerClick?.(complaint),
+              }}
+            >
+              <Popup>
+                <div className="max-w-xs space-y-2 text-sm text-slate-700">
+                  <div className="font-semibold text-slate-900">{complaint.complaintId}</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-500">{complaint.category}</div>
+                  <div className="text-slate-600">
+                    <strong>Status:</strong> <span className={complaint.status === 'Done' ? 'text-green-600 font-bold' : ''}>{complaint.status}</span>
+                  </div>
+                  <div className="text-slate-600">{complaint.address}</div>
+                  <div className="text-slate-600">{complaint.description}</div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
     </div>
   );

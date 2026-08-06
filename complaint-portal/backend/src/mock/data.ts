@@ -30,7 +30,7 @@ export interface Complaint {
   longitude: number;
   address: string;
   severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Pending' | 'Assigned' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done';
   createdAt: string;
   updatedAt: string;
   estimatedCompletion?: string;
@@ -77,11 +77,11 @@ const severities: Array<'Low' | 'Medium' | 'High' | 'Critical'> = [
   'Critical',
 ];
 
-const statuses: Array<'Pending' | 'Assigned' | 'In Progress' | 'Completed'> = [
+const statuses: Array<'Pending' | 'Progressed' | 'Under Construction' | 'Done'> = [
   'Pending',
-  'Assigned',
-  'In Progress',
-  'Completed',
+  'Progressed',
+  'Under Construction',
+  'Done',
 ];
 
 const descriptions = [
@@ -141,12 +141,12 @@ export const initializeMockData = () => {
       createdAt: createdDate.toISOString(),
       updatedAt: new Date().toISOString(),
       estimatedCompletion:
-        status !== 'Completed'
+        status !== 'Done'
           ? new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
           : undefined,
       assignedTo: status !== 'Pending' ? `Team ${Math.floor(Math.random() * 5) + 1}` : undefined,
       notes:
-        status === 'In Progress' ? 'Materials ordered, repair scheduled for next week.' : undefined,
+        status === 'Under Construction' ? 'Construction work is actively underway on site.' : undefined,
     };
 
     complaintsDatabase.push(complaint);
@@ -179,7 +179,7 @@ export const createComplaint = (data: Omit<Complaint, 'id' | 'complaintId' | 'cr
 
 export const updateComplaintStatus = (
   id: string,
-  status: 'Pending' | 'Assigned' | 'In Progress' | 'Completed'
+  status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done'
 ): Complaint | null => {
   const complaint = complaintsDatabase.find((c) => c.complaintId === id);
   if (!complaint) return null;
@@ -187,15 +187,16 @@ export const updateComplaintStatus = (
   complaint.status = status;
   complaint.updatedAt = new Date().toISOString();
 
-  if (status === 'Assigned') {
+  if (status === 'Progressed') {
     complaint.assignedTo = `Team ${Math.floor(Math.random() * 5) + 1}`;
+    complaint.notes = 'Work has been initiated and team assigned.';
   }
-  if (status === 'In Progress') {
-    complaint.notes = 'Materials ordered, repair scheduled for next week.';
+  if (status === 'Under Construction') {
+    complaint.notes = 'Construction work is actively underway on site.';
   }
-  if (status === 'Completed') {
+  if (status === 'Done') {
     complaint.estimatedCompletion = undefined;
-    complaint.notes = 'Repair completed successfully. Road surface restored.';
+    complaint.notes = 'Work completed successfully. Issue resolved.';
   }
 
   return complaint;
@@ -212,9 +213,9 @@ export const deleteComplaint = (id: string): boolean => {
 export const getDashboardStats = () => {
   const total = complaintsDatabase.length;
   const pending = complaintsDatabase.filter((c) => c.status === 'Pending').length;
-  const assigned = complaintsDatabase.filter((c) => c.status === 'Assigned').length;
-  const inProgress = complaintsDatabase.filter((c) => c.status === 'In Progress').length;
-  const completed = complaintsDatabase.filter((c) => c.status === 'Completed').length;
+  const progressed = complaintsDatabase.filter((c) => c.status === 'Progressed').length;
+  const underConstruction = complaintsDatabase.filter((c) => c.status === 'Under Construction').length;
+  const done = complaintsDatabase.filter((c) => c.status === 'Done').length;
 
   const severityCounts = {
     low: complaintsDatabase.filter((c) => c.severity === 'Low').length,
@@ -225,17 +226,17 @@ export const getDashboardStats = () => {
 
   const statusCounts = {
     pending,
-    assigned,
-    inProgress,
-    completed,
+    progressed,
+    underConstruction,
+    done,
   };
 
   return {
     total,
     pending,
-    assigned,
-    inProgress,
-    completed,
+    progressed,
+    underConstruction,
+    done,
     severityCounts,
     statusCounts,
   };

@@ -6,6 +6,7 @@ import { ToastContainer } from './components/ui/Toast';
 import { AndroidPhoneFrame } from './components/layouts/AndroidPhoneFrame';
 
 import { SplashScreen } from './pages/SplashScreen';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import { ReportComplaintPage } from './pages/ReportComplaintPage';
@@ -34,7 +35,7 @@ const AppContent: React.FC = () => {
       <div className="relative flex h-full w-full flex-col overflow-hidden bg-slate-950 text-slate-100">
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden page-enter">
           <Routes>
-            <Route path="/" element={<Navigate to={isAuthenticated ? landingPath : '/login'} replace />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/splash" element={<SplashScreen />} />
             <Route path="/login" element={isAuthenticated ? <Navigate to={landingPath} replace /> : <LoginPage />} />
 

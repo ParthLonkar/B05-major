@@ -112,7 +112,7 @@ export const updateComplaintStatus = async (req: Request, res: Response): Promis
       return;
     }
 
-    const validStatuses = ['Pending', 'Assigned', 'In Progress', 'Completed'];
+    const validStatuses = ['Pending', 'Progressed', 'Under Construction', 'Done'];
     if (!validStatuses.includes(status)) {
       res.status(400).json({
         success: false,

@@ -55,7 +55,7 @@ export const complaintApi = {
 
   updateStatus: async (
     id: string,
-    status: 'Pending' | 'Assigned' | 'In Progress' | 'Completed'
+    status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done'
   ): Promise<ApiResponse<Complaint>> => {
     const response = (await axiosInstance.put(`/complaints/${id}/status`, { status })) as ApiResponse<Complaint>;
     if (response.success) {

@@ -56,7 +56,7 @@ const parseCoordinates = (value: string): ParsedLocation | null => {
 
 export const ReportComplaintPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAppContext();
+  const { user, logout } = useAppContext();
   const { toasts, addToast, removeToast } = useToast();
   const { location, loading: locationLoading, error: locationError, requestLocation } = useGeolocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,12 +181,28 @@ export const ReportComplaintPage: React.FC = () => {
 
   return (
     <div className="min-h-full bg-slate-950 text-white">
-      <main className="px-4 py-6 pb-28">
-        <div className="mb-6 rounded-[32px] bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 p-[1px] shadow-2xl shadow-blue-500/20">
-          <div className="rounded-[31px] bg-slate-950/95 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300">User complaint form</p>
-            <h1 className="mt-2 text-3xl font-black text-white">Report a road issue</h1>
-            <p className="mt-2 text-sm text-slate-300">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 px-4 py-4 backdrop-blur-xl safe-area-top">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.28em] text-blue-300 truncate">Pothole Guard</p>
+            <h1 className="text-lg sm:text-xl font-bold text-white truncate">Report Complaint</h1>
+          </div>
+          <button
+            onClick={logout}
+            className="rounded-full border border-white/10 bg-white/5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-200 transition-all hover:bg-white/10 active:scale-95 touch-target shrink-0"
+          >
+            <span className="hidden xs:inline">Logout</span>
+            <span className="xs:hidden">⏻</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="px-3 sm:px-4 py-5 sm:py-6 pb-24 sm:pb-28 safe-area-bottom">
+        <div className="mb-5 sm:mb-6 rounded-[28px] sm:rounded-[32px] bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 p-[1px] shadow-2xl shadow-blue-500/20">
+          <div className="rounded-[27px] sm:rounded-[31px] bg-slate-950/95 p-4 sm:p-5">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.28em] text-blue-300">User complaint form</p>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-black text-white">Report a road issue</h2>
+            <p className="mt-2 text-xs sm:text-sm text-slate-300">
               Submit your complaint with live GPS or paste a Google Maps link and we will extract the coordinates.
             </p>
           </div>

@@ -6,7 +6,7 @@
 import React from 'react';
 
 interface StatusTimelineProps {
-  currentStatus: 'Pending' | 'Assigned' | 'In Progress' | 'Completed';
+  currentStatus: 'Pending' | 'Progressed' | 'Under Construction' | 'Done';
   createdAt: string;
   estimatedCompletion?: string;
 }
@@ -16,14 +16,14 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({
   createdAt,
   estimatedCompletion,
 }) => {
-  const statuses = ['Pending', 'Assigned', 'In Progress', 'Completed'];
+  const statuses = ['Pending', 'Progressed', 'Under Construction', 'Done'];
   const currentIndex = statuses.indexOf(currentStatus);
 
   const statusIcons = {
     Pending: '📋',
-    Assigned: '👤',
-    'In Progress': '🔧',
-    Completed: '✅',
+    Progressed: '👤',
+    'Under Construction': '🏗️',
+    Done: '✅',
   };
 
   return (

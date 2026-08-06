@@ -95,21 +95,21 @@ export const TrackComplaintPage: React.FC = () => {
   const getStatusVariant = (status: string) => {
     const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
       Pending: 'warning',
-      Assigned: 'info',
-      'In Progress': 'warning',
-      Completed: 'success',
+      Progressed: 'info',
+      'Under Construction': 'warning',
+      Done: 'success',
     };
     return map[status] || 'info';
   };
 
   return (
     <div className="relative min-h-full bg-slate-950 text-white">
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/90 px-4 py-4 backdrop-blur-xl">
-        <h1 className="text-2xl font-bold">Track Complaint</h1>
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/90 px-3 sm:px-4 py-4 backdrop-blur-xl safe-area-top">
+        <h1 className="text-xl sm:text-2xl font-bold">Track Complaint</h1>
       </header>
 
-      <main className="px-4 py-6 pb-32">
-        <Card className="mb-6 border border-white/10 bg-white/5 backdrop-blur-xl" title="Search Complaint">
+      <main className="px-3 sm:px-4 py-5 sm:py-6 pb-24 sm:pb-32 safe-area-bottom">
+        <Card className="mb-5 sm:mb-6 border border-white/10 bg-white/5 backdrop-blur-xl" title="Search Complaint">
           <div className="flex gap-2">
             <Input
               fullWidth
@@ -118,7 +118,7 @@ export const TrackComplaintPage: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyPress}
             />
-            <Button onClick={() => void handleSearch()} loading={loading} variant="primary">
+            <Button onClick={() => void handleSearch()} loading={loading} variant="primary" className="shrink-0">
               Search
             </Button>
           </div>
@@ -131,9 +131,9 @@ export const TrackComplaintPage: React.FC = () => {
         )}
 
         {!loading && complaint && (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             <Card title="Location preview" className="border border-white/10 bg-white/5 backdrop-blur-xl p-0 overflow-hidden">
-              <div className="h-72">
+              <div className="h-60 sm:h-72">
                 <GoogleMapsHeatmap complaints={[complaint]} />
               </div>
             </Card>
@@ -141,56 +141,56 @@ export const TrackComplaintPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-slate-400">Category</p>
-                    <p className="font-semibold text-white">{complaint.category}</p>
+                    <p className="text-xs sm:text-sm text-slate-400">Category</p>
+                    <p className="font-semibold text-white truncate">{complaint.category}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-400">Date</p>
-                    <p className="font-semibold text-white">{new Date(complaint.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs sm:text-sm text-slate-400">Date</p>
+                    <p className="font-semibold text-white truncate">{new Date(complaint.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-slate-400">Severity</p>
+                    <p className="text-xs sm:text-sm text-slate-400">Severity</p>
                     <Badge label={complaint.severity} variant={getSeverityVariant(complaint.severity)} />
                   </div>
                   <div>
-                    <p className="text-sm text-slate-400">Status</p>
+                    <p className="text-xs sm:text-sm text-slate-400">Status</p>
                     <Badge label={complaint.status} variant={getStatusVariant(complaint.status)} />
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-slate-400">Reporter</p>
-                  <p className="font-semibold text-white">{complaint.fullName}</p>
+                  <p className="text-xs sm:text-sm text-slate-400">Reporter</p>
+                  <p className="font-semibold text-white truncate">{complaint.fullName}</p>
                   <p className="text-sm text-slate-400">{complaint.mobileNumber}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-slate-400">Location</p>
-                  <p className="font-semibold text-white">{complaint.address}</p>
+                  <p className="text-xs sm:text-sm text-slate-400">Location</p>
+                  <p className="font-semibold text-white truncate">{complaint.address}</p>
                   <p className="text-xs text-slate-400">
                     {complaint.latitude.toFixed(4)}, {complaint.longitude.toFixed(4)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-slate-400">Description</p>
-                  <p className="text-white">{complaint.description}</p>
+                  <p className="text-xs sm:text-sm text-slate-400">Description</p>
+                  <p className="text-white text-sm sm:text-base">{complaint.description}</p>
                 </div>
 
                 {complaint.imagePreview && (
                   <div>
-                    <p className="mb-2 text-sm text-slate-400">Image</p>
-                    <img src={complaint.imagePreview} alt="Complaint" className="h-44 w-full rounded-2xl object-cover" />
+                    <p className="mb-2 text-xs sm:text-sm text-slate-400">Image</p>
+                    <img src={complaint.imagePreview} alt="Complaint" className="h-36 sm:h-44 w-full rounded-2xl object-cover" />
                   </div>
                 )}
 
                 {complaint.notes && (
                   <div>
-                    <p className="text-sm text-slate-400">Notes</p>
-                    <p className="text-white">{complaint.notes}</p>
+                    <p className="text-xs sm:text-sm text-slate-400">Notes</p>
+                    <p className="text-white text-sm sm:text-base">{complaint.notes}</p>
                   </div>
                 )}
               </div>

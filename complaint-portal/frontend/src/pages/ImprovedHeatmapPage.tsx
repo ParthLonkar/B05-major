@@ -72,15 +72,15 @@ export const ImprovedHeatmapPage: React.FC = () => {
 
   return (
     <div className="relative flex min-h-full flex-col bg-slate-950 text-white">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90 p-4 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90 p-3 sm:p-4 backdrop-blur-xl safe-area-top">
         <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">Live heatmap</p>
-            <h1 className="text-2xl font-bold text-white">Complaint Map</h1>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.24em] text-blue-300 truncate">Live heatmap</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-white truncate">Complaint Map</h1>
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="rounded-2xl bg-white/10 p-3 text-blue-300 transition-colors hover:bg-white/15"
+            className="rounded-2xl bg-white/10 p-2 sm:p-3 text-blue-300 transition-colors hover:bg-white/15 active:scale-95 touch-target shrink-0"
           >
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2h2a1 1 0 0 1 0 2h-2v2a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-2H1a1 1 0 0 1 0-2h2V6z" />
@@ -94,22 +94,22 @@ export const ImprovedHeatmapPage: React.FC = () => {
               <h3 className="mb-2 text-sm font-semibold text-slate-200">Status</h3>
               <button
                 onClick={showAllComplaints}
-                className="mb-2 w-full rounded-xl bg-white/8 px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-white/12"
+                className="mb-2 w-full rounded-xl bg-white/8 px-3 py-2.5 text-sm text-slate-200 transition-all hover:bg-white/12 active:scale-95 touch-target"
               >
                 Show All
               </button>
               <div className="grid grid-cols-2 gap-2">
-                {['Pending', 'Assigned', 'In Progress', 'Completed'].map((status) => (
+                {['Pending', 'Progressed', 'Under Construction', 'Done'].map((status) => (
                   <button
                     key={status}
                     onClick={() => toggleStatusFilter(status)}
-                    className={`rounded-xl px-3 py-2 text-sm transition-all ${
+                    className={`rounded-xl px-3 py-2.5 text-sm transition-all active:scale-95 touch-target ${
                       filters.status.includes(status)
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-blue-500 text-white shadow-md'
                         : 'bg-white/8 text-slate-200 hover:bg-white/12'
                     }`}
                   >
-                    {status}
+                    {status === 'Under Construction' ? 'Construction' : status}
                   </button>
                 ))}
               </div>
@@ -122,9 +122,9 @@ export const ImprovedHeatmapPage: React.FC = () => {
                   <button
                     key={severity}
                     onClick={() => toggleSeverityFilter(severity)}
-                    className={`rounded-xl px-3 py-2 text-sm transition-all ${
+                    className={`rounded-xl px-3 py-2.5 text-sm transition-all active:scale-95 touch-target ${
                       filters.severity.includes(severity)
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-blue-500 text-white shadow-md'
                         : 'bg-white/8 text-slate-200 hover:bg-white/12'
                     }`}
                   >
@@ -134,7 +134,7 @@ export const ImprovedHeatmapPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="text-xs text-slate-400">
+            <div className="text-xs sm:text-sm text-slate-400">
               Showing {filteredComplaints.length} of {complaints.length} complaints
             </div>
           </div>
@@ -159,23 +159,23 @@ export const ImprovedHeatmapPage: React.FC = () => {
       </div>
 
       {selectedComplaint && (
-        <div className="absolute inset-x-0 bottom-16 z-30 max-h-96 overflow-y-auto rounded-t-[28px] border-t border-white/10 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl">
+        <div className="absolute inset-x-0 bottom-16 z-30 max-h-[60vh] overflow-y-auto rounded-t-[24px] sm:rounded-t-[28px] border-t border-white/10 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl safe-area-bottom">
           <div className="mb-3 flex items-start justify-between">
-            <div>
-              <h3 className="text-lg font-bold text-white">{selectedComplaint.complaintId}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base sm:text-lg font-bold text-white truncate">{selectedComplaint.complaintId}</h3>
               <p className="mt-1 text-xs text-slate-400">{new Date(selectedComplaint.createdAt).toLocaleDateString()}</p>
             </div>
             <button
               onClick={() => setSelectedComplaint(null)}
-              className="rounded-full p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-full p-2 text-slate-400 transition-all hover:bg-white/10 hover:text-white active:scale-95 touch-target shrink-0"
             >
-              ?
+              ✕
             </button>
           </div>
 
           <div className="space-y-3">
             <div className="flex gap-2">
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedComplaint.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-300' : selectedComplaint.status === 'In Progress' ? 'bg-amber-500/15 text-amber-300' : 'bg-rose-500/15 text-rose-300'}`}>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedComplaint.status === 'Done' ? 'bg-emerald-500/15 text-emerald-300' : selectedComplaint.status === 'Under Construction' ? 'bg-yellow-500/15 text-yellow-300' : selectedComplaint.status === 'Progressed' ? 'bg-blue-500/15 text-blue-300' : 'bg-rose-500/15 text-rose-300'}`}>
                 {selectedComplaint.status}
               </span>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedComplaint.severity === 'Critical' ? 'bg-rose-500/15 text-rose-300' : selectedComplaint.severity === 'High' ? 'bg-orange-500/15 text-orange-300' : selectedComplaint.severity === 'Medium' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
@@ -190,7 +190,7 @@ export const ImprovedHeatmapPage: React.FC = () => {
 
             <div>
               <p className="text-xs text-slate-400">Location</p>
-              <p className="text-sm font-medium text-white">{selectedComplaint.address}</p>
+              <p className="text-sm font-medium text-white truncate">{selectedComplaint.address}</p>
               <p className="mt-1 text-xs text-slate-400">
                 {selectedComplaint.latitude.toFixed(4)}, {selectedComplaint.longitude.toFixed(4)}
               </p>

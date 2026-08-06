@@ -15,9 +15,9 @@ import { DashboardStats, Complaint } from '../types/index';
 import { useComplaintSync } from '../hooks/useComplaintSync';
 
 const StatPill: React.FC<{ label: string; value: number; tone: string }> = ({ label, value, tone }) => (
-  <div className={`rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl ${tone}`}>
-    <div className="text-3xl font-black">{value}</div>
-    <div className="mt-1 text-sm text-slate-300">{label}</div>
+  <div className={`rounded-2xl sm:rounded-3xl border border-white/10 bg-white/5 p-3 sm:p-4 backdrop-blur-xl ${tone}`}>
+    <div className="text-2xl sm:text-3xl font-black">{value}</div>
+    <div className="mt-1 text-xs sm:text-sm text-slate-300 truncate">{label}</div>
   </div>
 );
 
@@ -29,14 +29,14 @@ const QuickAction: React.FC<{ title: string; subtitle: string; onClick: () => vo
 }) => (
   <button
     onClick={onClick}
-    className={`rounded-[28px] border p-4 text-left transition-all active:scale-[0.98] ${
+    className={`rounded-2xl sm:rounded-[28px] border p-3 sm:p-4 text-left transition-all active:scale-[0.98] touch-feedback ${
       primary
         ? 'border-blue-400/30 bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20'
         : 'border-white/10 bg-white/5 text-white hover:bg-white/8'
     }`}
   >
-    <div className="text-sm font-semibold uppercase tracking-[0.2em] opacity-80">{title}</div>
-    <div className="mt-2 text-sm opacity-90">{subtitle}</div>
+    <div className="text-[10px] sm:text-sm font-semibold uppercase tracking-[0.2em] sm:tracking-[0.2em] opacity-80 truncate">{title}</div>
+    <div className="mt-1 sm:mt-2 text-xs sm:text-sm opacity-90 truncate">{subtitle}</div>
   </button>
 );
 
@@ -96,30 +96,30 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-full bg-slate-950 text-white">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 px-4 py-4 backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300">Complaint control</p>
-            <h1 className="text-3xl font-black leading-tight text-white">Live dashboard</h1>
-            <p className="mt-1 text-sm text-slate-300">Monitor complaints, open the map, and move issues through the workflow.</p>
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 px-4 py-4 backdrop-blur-xl safe-area-top">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.28em] text-blue-300 truncate">Complaint control</p>
+            <h1 className="text-2xl sm:text-3xl font-black leading-tight text-white truncate">Live dashboard</h1>
+            <p className="mt-1 text-xs sm:text-sm text-slate-300 line-clamp-2">Monitor complaints, open the map, and move issues through the workflow.</p>
           </div>
-          <Button onClick={() => navigate('/admin')} variant="primary" size="sm" className="shrink-0 rounded-full px-4">
-            Open Admin
+          <Button onClick={() => navigate('/admin')} variant="primary" size="sm" className="shrink-0 rounded-full px-3 sm:px-4 text-xs sm:text-sm">
+            Admin
           </Button>
         </div>
       </header>
 
-      <main className="space-y-6 px-4 py-6 pb-32">
+      <main className="space-y-5 sm:space-y-6 px-3 sm:px-4 py-5 sm:py-6 pb-24 sm:pb-32 safe-area-bottom">
         {stats && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <StatPill label="Total complaints" value={stats.total} tone="text-blue-300" />
-            <StatPill label="Open complaints" value={stats.pending + stats.assigned + stats.inProgress} tone="text-amber-300" />
+            <StatPill label="Open complaints" value={stats.pending + stats.progressed + stats.underConstruction} tone="text-amber-300" />
             <StatPill label="High priority" value={stats.severityCounts.critical + stats.severityCounts.high} tone="text-rose-300" />
             <StatPill label="Resolved" value={stats.completed} tone="text-emerald-300" />
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <QuickAction title="Manage" subtitle={pendingLabel} onClick={() => navigate('/admin')} primary />
           <QuickAction title="Map" subtitle="View complaint markers" onClick={() => navigate('/heatmap')} />
           <QuickAction title="Track" subtitle="Search any complaint" onClick={() => navigate('/track')} />
@@ -127,7 +127,7 @@ export const HomePage: React.FC = () => {
         </div>
 
         <Card title="Live complaint map" className="overflow-hidden border border-white/10 bg-white/5 p-0 backdrop-blur-xl">
-          <div className="h-[340px] overflow-hidden">
+          <div className="h-[280px] sm:h-[340px] overflow-hidden">
             <GoogleMapsHeatmap complaints={complaints} onMarkerClick={setSelectedComplaint} filters={mapFilters} />
           </div>
         </Card>
@@ -143,7 +143,7 @@ export const HomePage: React.FC = () => {
                 />
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-300">
+              <div className="rounded-2xl border border-dashed border-white/10 p-6 sm:p-8 text-center text-slate-300">
                 No complaints available.
               </div>
             )}
@@ -156,7 +156,7 @@ export const HomePage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-slate-400">Reporter</p>
-                  <p className="font-semibold text-white">{selectedComplaint.fullName}</p>
+                  <p className="font-semibold text-white truncate">{selectedComplaint.fullName}</p>
                 </div>
                 <div>
                   <p className="text-slate-400">Status</p>
@@ -165,7 +165,7 @@ export const HomePage: React.FC = () => {
               </div>
               <div>
                 <p className="text-slate-400">Description</p>
-                <p>{selectedComplaint.description}</p>
+                <p className="line-clamp-3">{selectedComplaint.description}</p>
               </div>
               <div className="flex gap-2">
                 <Button fullWidth onClick={() => navigate('/admin')}>

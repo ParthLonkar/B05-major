@@ -160,7 +160,7 @@ export const createComplaint = async (data: Omit<Complaint, 'id' | 'complaintId'
 
 export const updateComplaintStatus = async (
   id: string,
-  status: 'Pending' | 'Assigned' | 'In Progress' | 'Completed'
+  status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done'
 ): Promise<Complaint | null> => {
   const db = await loadDatabase();
   const complaint = db.complaints.find((c) => c.complaintId === id);
@@ -169,18 +169,18 @@ export const updateComplaintStatus = async (
   complaint.status = status;
   complaint.updatedAt = new Date().toISOString();
 
-  if (status === 'Assigned') {
+  if (status === 'Progressed') {
     complaint.assignedTo = `Team ${Math.floor(Math.random() * 5) + 1}`;
-    complaint.notes = 'Road crew assigned and work order created.';
+    complaint.notes = 'Work has been initiated and team assigned.';
   }
 
-  if (status === 'In Progress') {
-    complaint.notes = 'Repair crew is actively resolving the issue.';
+  if (status === 'Under Construction') {
+    complaint.notes = 'Construction work is actively underway on site.';
   }
 
-  if (status === 'Completed') {
+  if (status === 'Done') {
     complaint.estimatedCompletion = undefined;
-    complaint.notes = 'Repair completed and issue resolved successfully.';
+    complaint.notes = 'Work completed successfully. Issue resolved.';
   }
 
   await saveDatabase(db);
@@ -201,16 +201,16 @@ export const getDashboardStats = async () => {
   const db = await loadDatabase();
   const total = db.complaints.length;
   const pending = db.complaints.filter((c) => c.status === 'Pending').length;
-  const assigned = db.complaints.filter((c) => c.status === 'Assigned').length;
-  const inProgress = db.complaints.filter((c) => c.status === 'In Progress').length;
-  const completed = db.complaints.filter((c) => c.status === 'Completed').length;
+  const progressed = db.complaints.filter((c) => c.status === 'Progressed').length;
+  const underConstruction = db.complaints.filter((c) => c.status === 'Under Construction').length;
+  const done = db.complaints.filter((c) => c.status === 'Done').length;
 
   return {
     total,
     pending,
-    assigned,
-    inProgress,
-    completed,
+    progressed,
+    underConstruction,
+    done,
     severityCounts: {
       low: db.complaints.filter((c) => c.severity === 'Low').length,
       medium: db.complaints.filter((c) => c.severity === 'Medium').length,
@@ -219,9 +219,9 @@ export const getDashboardStats = async () => {
     },
     statusCounts: {
       pending,
-      assigned,
-      inProgress,
-      completed,
+      progressed,
+      underConstruction,
+      done,
     },
   };
 };

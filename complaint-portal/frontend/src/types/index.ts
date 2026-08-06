@@ -15,7 +15,7 @@ export interface Complaint {
   longitude: number;
   address: string;
   severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Pending' | 'Assigned' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done';
   createdAt: string;
   updatedAt: string;
   estimatedCompletion?: string;
@@ -28,7 +28,7 @@ export interface HeatmapMarker {
   latitude: number;
   longitude: number;
   severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Pending' | 'Assigned' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done';
   description: string;
   category: string;
   createdAt: string;
@@ -37,9 +37,9 @@ export interface HeatmapMarker {
 export interface DashboardStats {
   total: number;
   pending: number;
-  assigned: number;
-  inProgress: number;
-  completed: number;
+  progressed: number;
+  underConstruction: number;
+  done: number;
   severityCounts: {
     low: number;
     medium: number;
@@ -48,9 +48,9 @@ export interface DashboardStats {
   };
   statusCounts: {
     pending: number;
-    assigned: number;
-    inProgress: number;
-    completed: number;
+    progressed: number;
+    underConstruction: number;
+    done: number;
   };
 }
 

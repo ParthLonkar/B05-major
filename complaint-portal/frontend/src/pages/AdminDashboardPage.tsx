@@ -25,12 +25,13 @@ export const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'assigned' | 'progress' | 'completed'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'progressed' | 'construction' | 'done'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'severity' | 'status'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -65,9 +66,9 @@ export const AdminDashboardPage: React.FC = () => {
   const getStatusVariant = (status: string) => {
     const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
       Pending: 'danger',
-      Assigned: 'info',
-      'In Progress': 'warning',
-      Completed: 'success',
+      Progressed: 'info',
+      'Under Construction': 'warning',
+      Done: 'success',
     };
     return map[status] || 'info';
   };
@@ -82,17 +83,22 @@ export const AdminDashboardPage: React.FC = () => {
     return map[severity] || 'info';
   };
 
-  const handleStatusChange = async (complaint: Complaint, newStatus: 'Pending' | 'Assigned' | 'In Progress' | 'Completed') => {
+  const handleStatusChange = async (complaint: Complaint, newStatus: 'Pending' | 'Progressed' | 'Under Construction' | 'Done') => {
     try {
+      setUpdatingStatus(true);
       const response = await complaintApi.updateStatus(complaint.complaintId, newStatus);
       if (response.success && response.data) {
         await fetchData();
         setSelectedComplaint(response.data);
         addToast(`Status updated to ${newStatus}`, 'success');
+      } else {
+        addToast(response.error || 'Failed to update status', 'error');
       }
     } catch (error) {
       console.error('Error updating status:', error);
       addToast('Failed to update status', 'error');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -112,9 +118,9 @@ export const AdminDashboardPage: React.FC = () => {
     let list = complaints;
 
     if (filter === 'pending') list = list.filter((c) => c.status === 'Pending');
-    if (filter === 'assigned') list = list.filter((c) => c.status === 'Assigned');
-    if (filter === 'progress') list = list.filter((c) => c.status === 'In Progress');
-    if (filter === 'completed') list = list.filter((c) => c.status === 'Completed');
+    if (filter === 'progressed') list = list.filter((c) => c.status === 'Progressed');
+    if (filter === 'construction') list = list.filter((c) => c.status === 'Under Construction');
+    if (filter === 'done') list = list.filter((c) => c.status === 'Done');
 
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toLowerCase();
@@ -173,29 +179,33 @@ export const AdminDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="relative min-h-full bg-slate-950 pb-32 text-white">
+    <div className="relative min-h-full bg-slate-950 pb-24 sm:pb-32 text-white">
       <Header title="Admin Dashboard" />
 
-      <main className="space-y-6 px-4 py-6">
+      <main className="space-y-5 sm:space-y-6 px-3 sm:px-4 py-5 sm:py-6">
         {stats && (
           <div>
-            <h2 className="mb-4 text-lg font-bold text-white">Overview</h2>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl">
-                <div className="text-3xl font-black text-blue-400">{stats.total}</div>
-                <p className="text-sm text-slate-400">Total</p>
+            <h2 className="mb-3 sm:mb-4 text-base sm:text-lg font-bold text-white">Overview</h2>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-5">
+                <div className="text-2xl sm:text-3xl font-black text-blue-400">{stats.total}</div>
+                <p className="text-xs sm:text-sm text-slate-400">Total</p>
               </Card>
-              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl">
-                <div className="text-3xl font-black text-rose-400">{stats.pending}</div>
-                <p className="text-sm text-slate-400">Pending</p>
+              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-5">
+                <div className="text-2xl sm:text-3xl font-black text-rose-400">{stats.pending}</div>
+                <p className="text-xs sm:text-sm text-slate-400">Pending</p>
               </Card>
-              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl">
-                <div className="text-3xl font-black text-amber-400">{stats.inProgress}</div>
-                <p className="text-sm text-slate-400">In Progress</p>
+              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-5">
+                <div className="text-2xl sm:text-3xl font-black text-blue-400">{stats.progressed}</div>
+                <p className="text-xs sm:text-sm text-slate-400">Progressed</p>
               </Card>
-              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl">
-                <div className="text-3xl font-black text-emerald-400">{stats.completed}</div>
-                <p className="text-sm text-slate-400">Completed</p>
+              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-5">
+                <div className="text-2xl sm:text-3xl font-black text-yellow-400">{stats.underConstruction}</div>
+                <p className="text-xs sm:text-sm text-slate-400">Construction</p>
+              </Card>
+              <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-5 col-span-2">
+                <div className="text-2xl sm:text-3xl font-black text-green-400">{stats.done}</div>
+                <p className="text-xs sm:text-sm text-slate-400">Done</p>
               </Card>
             </div>
           </div>
@@ -215,59 +225,61 @@ export const AdminDashboardPage: React.FC = () => {
             <Card title="By Status" className="border border-white/10 bg-white/5 backdrop-blur-xl">
               <div className="space-y-2">
                 <div className="flex justify-between"><span>Pending</span><span className="font-bold">{stats.statusCounts.pending}</span></div>
-                <div className="flex justify-between"><span>Assigned</span><span className="font-bold">{stats.statusCounts.assigned}</span></div>
-                <div className="flex justify-between"><span>In Progress</span><span className="font-bold">{stats.statusCounts.inProgress}</span></div>
-                <div className="flex justify-between"><span>Completed</span><span className="font-bold">{stats.statusCounts.completed}</span></div>
+                <div className="flex justify-between"><span>Progressed</span><span className="font-bold">{stats.statusCounts.progressed}</span></div>
+                <div className="flex justify-between"><span>Construction</span><span className="font-bold">{stats.statusCounts.underConstruction}</span></div>
+                <div className="flex justify-between"><span>Done</span><span className="font-bold">{stats.statusCounts.done}</span></div>
               </div>
             </Card>
           </div>
         )}
 
         <Card className="border border-white/10 bg-white/5 backdrop-blur-xl">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+          <div className="space-y-3">
             <Input
               fullWidth
               label="Search"
-              placeholder="Search by ID, name, category, location, or description"
+              placeholder="Search complaints..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-300">Sort</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-white"
-              >
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-                <option value="severity">Severity</option>
-                <option value="status">Status</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-300">Filter</label>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {[
-                  { id: 'all', label: 'All' },
-                  { id: 'pending', label: 'Pending' },
-                  { id: 'assigned', label: 'Assigned' },
-                  { id: 'progress', label: 'In Progress' },
-                  { id: 'completed', label: 'Completed' },
-                ].map((btn) => (
-                  <Button key={btn.id} variant={filter === btn.id ? 'primary' : 'outline'} size="sm" onClick={() => setFilter(btn.id as any)}>
-                    {btn.label}
-                  </Button>
-                ))}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-300">Sort</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-white touch-target"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="severity">Severity</option>
+                  <option value="status">Status</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-300">Filter</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'pending', label: 'Pending' },
+                    { id: 'progressed', label: 'Progressed' },
+                    { id: 'construction', label: 'Construction' },
+                    { id: 'done', label: 'Done' },
+                  ].map((btn) => (
+                    <Button key={btn.id} variant={filter === btn.id ? 'primary' : 'outline'} size="sm" onClick={() => setFilter(btn.id as any)} className="text-xs">
+                      {btn.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </Card>
 
         <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Complaints</h2>
-            <span className="text-sm text-slate-400">{filteredComplaints.length} results</span>
+          <div className="mb-3 sm:mb-4 flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-bold text-white">Complaints</h2>
+            <span className="text-xs sm:text-sm text-slate-400">{filteredComplaints.length} results</span>
           </div>
 
           {paginatedComplaints.length > 0 ? (
@@ -275,24 +287,24 @@ export const AdminDashboardPage: React.FC = () => {
               {paginatedComplaints.map((complaint) => (
                 <Card
                   key={complaint.id}
-                  className="cursor-pointer border border-white/10 bg-white/5 backdrop-blur-xl"
+                  className="cursor-pointer border border-white/10 bg-white/5 backdrop-blur-xl active:scale-[0.98] transition-transform"
                   onClick={() => setSelectedComplaint(complaint)}
                 >
                   <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-bold text-white">{complaint.complaintId}</h3>
-                        <p className="text-sm text-slate-400">{complaint.category}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-white truncate">{complaint.complaintId}</h3>
+                        <p className="text-xs sm:text-sm text-slate-400 truncate">{complaint.category}</p>
                       </div>
-                      <div className="flex flex-wrap justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-1 sm:gap-2 shrink-0">
                         <Badge label={complaint.severity} variant={getSeverityVariant(complaint.severity)} size="sm" />
                         <Badge label={complaint.status} variant={getStatusVariant(complaint.status)} size="sm" />
                       </div>
                     </div>
-                    <p className="line-clamp-1 text-sm text-slate-300">{complaint.description}</p>
+                    <p className="line-clamp-1 text-xs sm:text-sm text-slate-300">{complaint.description}</p>
                     <div className="flex justify-between text-xs text-slate-400">
-                      <span>{complaint.fullName}</span>
-                      <span>{new Date(complaint.createdAt).toLocaleDateString()}</span>
+                      <span className="truncate">{complaint.fullName}</span>
+                      <span className="shrink-0 ml-2">{new Date(complaint.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </Card>
@@ -300,7 +312,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           ) : (
             <Card className="border border-white/10 bg-white/5 backdrop-blur-xl">
-              <div className="py-8 text-center text-slate-400">No complaints found</div>
+              <div className="py-6 sm:py-8 text-center text-slate-400">No complaints found</div>
             </Card>
           )}
         </div>
@@ -320,26 +332,53 @@ export const AdminDashboardPage: React.FC = () => {
         )}
       </main>
 
-      <Modal isOpen={statusModalOpen && selectedComplaint !== null} onClose={() => setStatusModalOpen(false)} title={`Update Status - ${selectedComplaint?.complaintId}`}>
-        <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-3 text-sm text-slate-300">
-            Choose the next update for this complaint.
-          </div>
-          {['Pending', 'Assigned', 'In Progress', 'Completed'].map((status) => (
-            <Button
-              key={status}
-              fullWidth
-              variant={selectedComplaint?.status === status ? 'primary' : 'outline'}
-              onClick={() => {
-                if (selectedComplaint) {
-                  void handleStatusChange(selectedComplaint, status as any);
-                }
-                setStatusModalOpen(false);
-              }}
-            >
-              {status === 'In Progress' ? 'Ongoing work' : status === 'Completed' ? 'Finished' : status}
-            </Button>
-          ))}
+      <Modal isOpen={statusModalOpen && selectedComplaint !== null} onClose={() => setStatusModalOpen(false)} title={`Update Status - ${selectedComplaint?.complaintId}`} zIndex="z-[60]">
+        <div className="space-y-4">
+          {selectedComplaint && (
+            <>
+              <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Current Status:</span>
+                  <span className="font-semibold text-white">{selectedComplaint.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Category:</span>
+                  <span className="font-semibold text-white">{selectedComplaint.category}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Severity:</span>
+                  <span className="font-semibold text-white">{selectedComplaint.severity}</span>
+                </div>
+                {selectedComplaint.assignedTo && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Assigned To:</span>
+                    <span className="font-semibold text-white">{selectedComplaint.assignedTo}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-slate-300 mb-3">Select new status:</p>
+                <div className="space-y-2">
+                  {['Progressed', 'Under Construction', 'Done'].map((status) => (
+                    <Button
+                      key={status}
+                      fullWidth
+                      variant={selectedComplaint.status === status ? 'primary' : 'outline'}
+                      disabled={updatingStatus}
+                      loading={updatingStatus}
+                      onClick={async () => {
+                        await handleStatusChange(selectedComplaint, status as any);
+                        setStatusModalOpen(false);
+                      }}
+                    >
+                      {status}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 
@@ -350,9 +389,12 @@ export const AdminDashboardPage: React.FC = () => {
           title={selectedComplaint.complaintId}
           footer={
             <div className="flex gap-2">
-              <Button fullWidth onClick={() => setStatusModalOpen(true)} variant="primary">
+              <Button fullWidth onClick={() => {
+                setStatusModalOpen(true);
+              }} variant="primary">
                 Change Status
               </Button>
+              
               <Button fullWidth variant="danger" onClick={() => void handleDeleteComplaint(selectedComplaint.complaintId)}>
                 Delete
               </Button>

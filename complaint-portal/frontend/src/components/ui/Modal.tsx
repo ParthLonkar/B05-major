@@ -11,6 +11,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  zIndex?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -20,11 +21,12 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   className = '',
+  zIndex = 'z-50',
 }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/55 p-4">
+    <div className={`fixed inset-0 ${zIndex} flex items-end sm:items-center justify-center bg-black/55 p-4 backdrop-blur-sm`}>
       <div
         className={`w-full max-w-md rounded-[28px] bg-white shadow-2xl animate-in fade-in zoom-in duration-200 dark:bg-slate-900 ${className}`}
       >
@@ -36,7 +38,7 @@ export const Modal: React.FC<ModalProps> = ({
               className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
               aria-label="Close modal"
             >
-              ×
+              âœ•
             </button>
           </div>
         )}

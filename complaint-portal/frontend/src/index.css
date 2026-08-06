@@ -277,6 +277,25 @@ body {
   @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
 }
 
+/* Better touch feedback */
+.touch-feedback {
+  @apply transition-all duration-150 active:scale-95 active:opacity-80;
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Smooth scrolling container */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Android Typography */
 .android-headline {
   @apply text-2xl font-bold tracking-tight;
@@ -307,6 +326,21 @@ body {
    RESPONSIVE DESIGN
    ============================================ */
 
+/* Extra Small Devices (tiny phones, less than 375px) */
+@media (max-width: 374px) {
+  .xs\:hidden {
+    display: none !important;
+  }
+  
+  .xs\:inline {
+    display: inline !important;
+  }
+
+  html {
+    font-size: 14px;
+  }
+}
+
 /* Mobile First - Full Screen */
 @media (max-width: 640px) {
   #root {
@@ -316,6 +350,17 @@ body {
 
   .sm\:hidden {
     display: none !important;
+  }
+
+  /* Improve touch target sizes on mobile */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better spacing on mobile */
+  .page-container {
+    padding: 1rem;
   }
 }
 
@@ -339,6 +384,30 @@ body {
 @media (orientation: landscape) and (max-height: 500px) {
   .hide-on-landscape {
     display: none;
+  }
+
+  /* Reduce padding in landscape mode */
+  .page-container {
+    padding: 0.5rem;
+  }
+}
+
+/* Very small screens adjustments */
+@media (max-width: 360px) {
+  body {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
   }
 }
 
