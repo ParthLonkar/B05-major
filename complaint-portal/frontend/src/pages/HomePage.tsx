@@ -115,7 +115,7 @@ export const HomePage: React.FC = () => {
             <StatPill label="Total complaints" value={stats.total} tone="text-blue-300" />
             <StatPill label="Open complaints" value={stats.pending + stats.progressed + stats.underConstruction} tone="text-amber-300" />
             <StatPill label="High priority" value={stats.severityCounts.critical + stats.severityCounts.high} tone="text-rose-300" />
-            <StatPill label="Resolved" value={stats.completed} tone="text-emerald-300" />
+            <StatPill label="Resolved" value={stats.done} tone="text-emerald-300" />
           </div>
         )}
 

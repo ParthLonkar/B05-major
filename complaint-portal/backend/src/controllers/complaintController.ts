@@ -52,13 +52,16 @@ export const getComplaintById = async (req: Request, res: Response): Promise<voi
 };
 
 /**
- * Create new complaint
+ * Create new complaint (handles JSON or multipart/form-data file uploads)
  */
 export const createComplaint = async (req: Request, res: Response): Promise<void> => {
   try {
     const { fullName, mobileNumber, email, category, description, latitude, longitude, address, severity, imagePreview } = req.body;
 
-    if (!fullName || !mobileNumber || !category || !description || latitude === undefined || longitude === undefined) {
+    const latNum = latitude !== undefined && latitude !== null ? Number(latitude) : undefined;
+    const lngNum = longitude !== undefined && longitude !== null ? Number(longitude) : undefined;
+
+    if (!fullName || !mobileNumber || !category || !description || latNum === undefined || Number.isNaN(latNum) || lngNum === undefined || Number.isNaN(lngNum)) {
       res.status(400).json({
         success: false,
         error: 'Missing required fields',
@@ -66,18 +69,26 @@ export const createComplaint = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const newComplaint = await dataService.createComplaint({
-      fullName,
-      mobileNumber,
-      email,
-      category,
-      description,
-      latitude,
-      longitude,
-      address: address || 'Unknown Location',
-      severity: severity || 'Medium',
-      imagePreview,
-    });
+    let uploadedFilePath: string | undefined = undefined;
+    if (req.file) {
+      uploadedFilePath = `/uploads/complaints/${req.file.filename}`;
+    }
+
+    const newComplaint = await dataService.createComplaint(
+      {
+        fullName,
+        mobileNumber,
+        email,
+        category,
+        description,
+        latitude: latNum,
+        longitude: lngNum,
+        address: address || 'Unknown Location',
+        severity: severity || 'Medium',
+        imagePreview,
+      },
+      uploadedFilePath
+    );
 
     const emailSent = await sendComplaintReceipt(newComplaint);
 

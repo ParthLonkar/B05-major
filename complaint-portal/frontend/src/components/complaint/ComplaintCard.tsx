@@ -7,6 +7,7 @@ import React from 'react';
 import { Card } from '../ui/Card.js';
 import { Badge } from '../ui/Badge.js';
 import { Complaint } from '../../types/index.js';
+import { getImageUrl } from '../../utils/imageUtils.js';
 
 interface ComplaintCardProps {
   complaint: Complaint;
@@ -34,9 +35,16 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
     return map[status] || 'info';
   };
 
+  const imageUrl = getImageUrl(complaint.imagePreview);
+
   return (
     <Card clickable onClick={() => onClick?.(complaint)} className="cursor-pointer touch-feedback">
       <div className="space-y-3">
+        {imageUrl && (
+          <div className="overflow-hidden rounded-xl border border-white/10">
+            <img src={imageUrl} alt="Complaint Preview" className="h-32 w-full object-cover" />
+          </div>
+        )}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg truncate">{complaint.complaintId}</h3>
@@ -55,7 +63,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
           <span className="shrink-0 ml-2">{new Date(complaint.createdAt).toLocaleDateString()}</span>
         </div>
 
-        {complaint.status !== 'Completed' && complaint.estimatedCompletion && (
+        {complaint.status !== 'Done' && complaint.estimatedCompletion && (
           <div className="text-xs font-medium text-blue-600 dark:text-blue-400 truncate">
             Est. Completion: {new Date(complaint.estimatedCompletion).toLocaleDateString()}
           </div>

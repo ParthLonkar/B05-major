@@ -12,26 +12,31 @@ export interface User {
   createdAt: string;
 }
 
-const mapPrismaComplaintToComplaint = (c: any): Complaint => ({
-  id: c.uuid,
-  complaintId: c.complaintId,
-  fullName: c.fullName,
-  mobileNumber: c.mobileNumber,
-  email: c.email || undefined,
-  category: c.category as any,
-  description: c.description,
-  imagePreview: c.imagePreview || undefined,
-  latitude: Number(c.latitude),
-  longitude: Number(c.longitude),
-  address: c.address,
-  severity: c.severity as any,
-  status: c.status as any,
-  createdAt: c.createdAt.toISOString(),
-  updatedAt: c.updatedAt.toISOString(),
-  estimatedCompletion: c.estimatedCompletion ? c.estimatedCompletion.toISOString() : undefined,
-  assignedTo: c.assignedTeam || undefined,
-  notes: c.notes || undefined,
-});
+const mapPrismaComplaintToComplaint = (c: any): Complaint => {
+  const primaryImagePath = c.images && c.images.length > 0 ? c.images[0].filePath : undefined;
+  const finalImagePreview = primaryImagePath || c.imagePreview || undefined;
+
+  return {
+    id: c.uuid,
+    complaintId: c.complaintId,
+    fullName: c.fullName,
+    mobileNumber: c.mobileNumber,
+    email: c.email || undefined,
+    category: c.category as any,
+    description: c.description,
+    imagePreview: finalImagePreview,
+    latitude: Number(c.latitude),
+    longitude: Number(c.longitude),
+    address: c.address,
+    severity: c.severity as any,
+    status: c.status as any,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+    estimatedCompletion: c.estimatedCompletion ? c.estimatedCompletion.toISOString() : undefined,
+    assignedTo: c.assignedTeam || undefined,
+    notes: c.notes || undefined,
+  };
+};
 
 const generateComplaintId = async (): Promise<string> => {
   const year = new Date().getFullYear();
@@ -116,6 +121,7 @@ export const createUser = async (name: string, email: string, password: string):
 
 export const getAllComplaints = async (): Promise<Complaint[]> => {
   const complaints = await prisma.complaint.findMany({
+    include: { images: true },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -132,6 +138,7 @@ export const getComplaintById = async (id: string): Promise<Complaint | null> =>
         ...(isNumeric ? [{ id: parseInt(id, 10) }] : []),
       ],
     },
+    include: { images: true },
   });
 
   return complaint ? mapPrismaComplaintToComplaint(complaint) : null;
@@ -150,6 +157,7 @@ export const searchComplaints = async (query: string): Promise<Complaint[]> => {
         { mobileNumber: { contains: lowerQuery } },
       ],
     },
+    include: { images: true },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -157,10 +165,13 @@ export const searchComplaints = async (query: string): Promise<Complaint[]> => {
 };
 
 export const createComplaint = async (
-  data: Omit<Complaint, 'id' | 'complaintId' | 'createdAt' | 'updatedAt' | 'estimatedCompletion' | 'assignedTo' | 'notes' | 'status'>
+  data: Omit<Complaint, 'id' | 'complaintId' | 'createdAt' | 'updatedAt' | 'estimatedCompletion' | 'assignedTo' | 'notes' | 'status'>,
+  uploadedFilePath?: string
 ): Promise<Complaint> => {
   const complaintId = await generateComplaintId();
   const estimatedCompletion = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  const initialImagePreview = uploadedFilePath || data.imagePreview || null;
 
   const newComplaint = await prisma.complaint.create({
     data: {
@@ -175,12 +186,21 @@ export const createComplaint = async (
       address: data.address,
       severity: data.severity,
       status: 'Pending',
-      imagePreview: data.imagePreview || null,
+      imagePreview: initialImagePreview,
       estimatedCompletion,
     },
   });
 
-  return mapPrismaComplaintToComplaint(newComplaint);
+  if (uploadedFilePath) {
+    await prisma.image.create({
+      data: {
+        complaintId: newComplaint.id,
+        filePath: uploadedFilePath,
+      },
+    });
+  }
+
+  return getComplaintById(newComplaint.complaintId) as Promise<Complaint>;
 };
 
 export const updateComplaintStatus = async (
@@ -218,6 +238,7 @@ export const updateComplaintStatus = async (
       notes,
       estimatedCompletion,
     },
+    include: { images: true },
   });
 
   return mapPrismaComplaintToComplaint(updated);

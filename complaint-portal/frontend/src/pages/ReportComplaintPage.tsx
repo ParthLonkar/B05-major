@@ -79,7 +79,9 @@ export const ReportComplaintPage: React.FC = () => {
       }));
     }
   }, [user]);
+
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submittedComplaintId, setSubmittedComplaintId] = useState<string | null>(null);
   const [emailConfirmed, setEmailConfirmed] = useState<boolean | null>(null);
@@ -106,6 +108,7 @@ export const ReportComplaintPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setSelectedFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
@@ -161,6 +164,7 @@ export const ReportComplaintPage: React.FC = () => {
         longitude: chosenLocation.longitude,
         address: overrideLocation ? overrideLocation.label : 'Current Location',
         severity: formData.severity,
+        imageFile: selectedFile || undefined,
         imagePreview: imagePreview || undefined,
       });
 
@@ -171,9 +175,10 @@ export const ReportComplaintPage: React.FC = () => {
       } else {
         addToast(response.error || 'Failed to submit complaint', 'error');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting complaint:', error);
-      addToast('Error submitting complaint', 'error');
+      const errMsg = error.response?.data?.error || 'Error submitting complaint';
+      addToast(errMsg, 'error');
     } finally {
       setLoading(false);
     }

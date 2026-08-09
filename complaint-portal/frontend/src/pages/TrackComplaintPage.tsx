@@ -13,6 +13,7 @@ import { complaintApi } from '../services/api';
 import { Complaint } from '../types/index';
 import { useToast } from '../hooks/useToast';
 import { useComplaintSync } from '../hooks/useComplaintSync';
+import { getImageUrl } from '../utils/imageUtils';
 
 export const TrackComplaintPage: React.FC = () => {
   const { complaintId } = useParams();
@@ -183,7 +184,7 @@ export const TrackComplaintPage: React.FC = () => {
                 {complaint.imagePreview && (
                   <div>
                     <p className="mb-2 text-xs sm:text-sm text-slate-400">Image</p>
-                    <img src={complaint.imagePreview} alt="Complaint" className="h-36 sm:h-44 w-full rounded-2xl object-cover" />
+                    <img src={getImageUrl(complaint.imagePreview)} alt="Complaint" className="h-36 sm:h-44 w-full rounded-2xl object-cover" />
                   </div>
                 )}
 

@@ -1,13 +1,14 @@
 import express, { Router } from 'express';
 import * as controllers from '../controllers/complaintController';
 import { authenticate, requireAdmin } from '../middleware/auth';
+import { uploadSingleImage } from '../middleware/upload';
 
 const router: Router = express.Router();
 
 // Public routes (Citizen reporting & status tracking)
 router.get('/search/query', controllers.searchComplaints);
 router.get('/:id', controllers.getComplaintById);
-router.post('/', controllers.createComplaint);
+router.post('/', uploadSingleImage, controllers.createComplaint);
 
 // Protected Admin-Only routes
 router.get('/', authenticate, requireAdmin, controllers.getAllComplaints);

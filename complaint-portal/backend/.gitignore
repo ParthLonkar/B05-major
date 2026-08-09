@@ -13,6 +13,11 @@ dist
 .env.local
 .env.*.local
 
+# Uploads directory (keep directory structure, ignore uploaded image files)
+uploads/*
+!uploads/complaints/
+!uploads/complaints/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
