@@ -31,8 +31,15 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     console.error('API Error:', error.response?.data || error.message);
-    throw error;
+    return Promise.reject(error);
   }
 );
 

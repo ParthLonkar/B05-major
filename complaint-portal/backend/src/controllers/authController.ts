@@ -1,6 +1,17 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import * as db from '../utils/database';
+
+const generateToken = (userId: string, email: string, role: string): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET configuration is missing');
+  }
+
+  const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+  return jwt.sign({ userId, email, role }, secret, { expiresIn: expiresIn as any });
+};
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -27,6 +38,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const token = generateToken(user.id, user.email, user.role);
+
     res.json({
       success: true,
       data: {
@@ -36,7 +49,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           email: user.email,
           role: user.role,
         },
-        token: `token_${user.id}`,
+        token,
       },
     });
   } catch (error) {
@@ -65,6 +78,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       ? existingUser
       : await db.createUser(name, email, password);
 
+    const token = generateToken(user.id, user.email, user.role);
+
     res.status(existingUser ? 200 : 201).json({
       success: true,
       data: {
@@ -74,7 +89,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           email: user.email,
           role: user.role,
         },
-        token: `token_${user.id}`,
+        token,
       },
       message: existingUser ? 'User already exists, logged in.' : 'User registered successfully.',
     });
