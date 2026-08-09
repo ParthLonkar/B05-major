@@ -1,0 +1,78 @@
+// Prisma Schema for Complaint Management Portal
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int         @id @default(autoincrement())
+  uuid         String      @unique @default(uuid())
+  name         String
+  email        String      @unique
+  passwordHash String      @map("password_hash")
+  role         String      @default("user") // 'user' | 'citizen' | 'admin'
+  createdAt    DateTime    @default(now()) @map("created_at")
+  complaints   Complaint[]
+
+  @@map("users")
+}
+
+model Complaint {
+  id                  Int       @id @default(autoincrement())
+  uuid                String    @unique @default(uuid())
+  complaintId         String    @unique @map("complaint_id")
+  userId              Int?      @map("user_id")
+  fullName            String    @map("full_name")
+  mobileNumber        String    @map("mobile_number")
+  email               String?
+  category            String
+  description         String    @db.Text
+  latitude            Decimal   @db.Decimal(10, 8)
+  longitude           Decimal   @db.Decimal(11, 8)
+  address             String
+  severity            String
+  status              String    @default("Pending")
+  assignedTeam        String?   @map("assigned_team")
+  notes               String?   @db.Text
+  imagePreview        String?   @db.MediumText @map("image_preview")
+  estimatedCompletion DateTime? @map("estimated_completion")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  images Image[]
+
+  @@map("complaints")
+}
+
+model Image {
+  id                Int         @id @default(autoincrement())
+  complaintId       Int         @map("complaint_id")
+  filePath          String      @map("file_path")
+  annotatedFilePath String?     @map("annotated_file_path")
+  uploadedAt        DateTime    @default(now()) @map("uploaded_at")
+
+  complaint  Complaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  detections Detection[]
+
+  @@map("images")
+}
+
+model Detection {
+  id            Int      @id @default(autoincrement())
+  imageId       Int      @map("image_id")
+  potholeCount  Int      @map("pothole_count")
+  severity      String
+  confidenceAvg Float    @map("confidence_avg")
+  bboxData      Json     @map("bbox_data")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@map("detections")
+}

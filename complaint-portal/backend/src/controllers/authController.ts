@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 import * as db from '../utils/database';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
@@ -14,7 +15,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const user = await db.getUserByEmail(email);
-    if (!user || user.password !== password) {
+    const isPasswordValid = user
+      ? (await bcrypt.compare(password, user.password)) || user.password === password
+      : false;
+
+    if (!user || !isPasswordValid) {
       res.status(401).json({
         success: false,
         error: 'Invalid login credentials.',
