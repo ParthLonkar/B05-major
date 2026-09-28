@@ -1,13 +1,20 @@
 import express, { Router } from 'express';
 import * as controllers from '../controllers/complaintController';
+import { authenticate, requireAdmin } from '../middleware/auth';
+import { uploadSingleImage } from '../middleware/upload';
 
 const router: Router = express.Router();
 
+// Public routes (Citizen reporting & status tracking)
 router.get('/search/query', controllers.searchComplaints);
-router.get('/', controllers.getAllComplaints);
 router.get('/:id', controllers.getComplaintById);
-router.post('/', controllers.createComplaint);
-router.put('/:id/status', controllers.updateComplaintStatus);
-router.delete('/:id', controllers.deleteComplaint);
+router.post('/', uploadSingleImage, controllers.createComplaint);
+
+// Protected routes (requires authentication, not just admin)
+router.get('/', authenticate, controllers.getAllComplaints);
+
+// Admin-Only routes
+router.put('/:id/status', authenticate, requireAdmin, controllers.updateComplaintStatus);
+router.delete('/:id', authenticate, requireAdmin, controllers.deleteComplaint);
 
 export default router;

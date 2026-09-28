@@ -1,6 +1,5 @@
 /**
- * Landing Page
- * Public view showing heatmap and login options
+ * Premium Landing Page — gradient hero, animated stats, glass info cards
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,6 +10,36 @@ import { Card } from '../components/ui/Card';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Complaint } from '../types';
 import { complaintApi, dashboardApi } from '../services/api';
+
+const StatCard: React.FC<{ value: number | string; label: string; color: string; delay?: string }> = ({
+  value, label, color, delay = '0s'
+}) => (
+  <div
+    className="glass-card rounded-2xl p-4 text-center animate-fade-up"
+    style={{ animationDelay: delay }}
+  >
+    <div className="text-2xl font-black" style={{ color }}>{value}</div>
+    <p className="text-[10px] text-slate-500 mt-1 font-semibold uppercase tracking-wider">{label}</p>
+  </div>
+);
+
+const InfoCard: React.FC<{ emoji: string; title: string; desc: string; delay?: string }> = ({
+  emoji, title, desc, delay = '0s'
+}) => (
+  <div
+    className="glass-card glass-card-hover rounded-2xl p-5 text-center animate-fade-up"
+    style={{ animationDelay: delay }}
+  >
+    <div
+      className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl"
+      style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.2)' }}
+    >
+      {emoji}
+    </div>
+    <h3 className="text-sm font-bold text-white mb-1.5">{title}</h3>
+    <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
+  </div>
+);
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,161 +54,134 @@ export const LandingPage: React.FC = () => {
         complaintApi.getAll(),
         dashboardApi.getStats(),
       ]);
-
-      if (complaintsRes.success && Array.isArray(complaintsRes.data)) {
-        setComplaints(complaintsRes.data);
-      }
-
-      if (statsRes.success && statsRes.data) {
-        setStats(statsRes.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
+      if (complaintsRes.success && Array.isArray(complaintsRes.data)) setComplaints(complaintsRes.data);
+      if (statsRes.success && statsRes.data) setStats(statsRes.data);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Hero Section */}
-      <header className="relative border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
-        <div className="px-4 sm:px-6 py-6 sm:py-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center space-y-4 sm:space-y-6">
-              <div>
-                <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] sm:tracking-[0.28em] text-blue-300">
-                  Public Infrastructure Monitoring
-                </p>
-                <h1 className="mt-2 sm:mt-3 text-4xl sm:text-5xl lg:text-6xl font-black text-white">
-                  Pothole Guard
-                </h1>
-                <p className="mt-3 sm:mt-4 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto">
-                  Real-time tracking of road maintenance complaints. View accountability, report issues, and monitor progress in your area.
-                </p>
-              </div>
+    <div
+      className="min-h-screen text-white"
+      style={{ background: 'linear-gradient(160deg, #080d1a 0%, #0a0f1e 60%, #06091a 100%)' }}
+    >
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden">
+        {/* Background orbs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute w-72 h-72 rounded-full opacity-20 animate-orb1"
+            style={{ background: 'radial-gradient(circle, rgba(14,165,233,0.6) 0%, transparent 70%)', top: '-80px', right: '-40px', filter: 'blur(70px)' }} />
+          <div className="absolute w-60 h-60 rounded-full opacity-15 animate-orb2"
+            style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.7) 0%, transparent 70%)', bottom: '-40px', left: '-30px', filter: 'blur(60px)' }} />
+        </div>
 
-              {/* Stats Overview */}
-              {stats && (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 max-w-4xl mx-auto">
-                  <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-4">
-                    <div className="text-2xl sm:text-3xl font-black text-blue-400">{stats.total}</div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Total</p>
-                  </Card>
-                  <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-4">
-                    <div className="text-2xl sm:text-3xl font-black text-rose-400">{stats.pending}</div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Pending</p>
-                  </Card>
-                  <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-4">
-                    <div className="text-2xl sm:text-3xl font-black text-blue-400">{stats.progressed || 0}</div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Progressed</p>
-                  </Card>
-                  <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-4">
-                    <div className="text-2xl sm:text-3xl font-black text-yellow-400">{stats.underConstruction || 0}</div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Building</p>
-                  </Card>
-                  <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl p-3 sm:p-4">
-                    <div className="text-2xl sm:text-3xl font-black text-green-400">{stats.done}</div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 mt-1">Done</p>
-                  </Card>
-                </div>
-              )}
+        <div className="relative px-5 pt-8 pb-6">
+          {/* Badge */}
+          <div className="flex justify-center animate-fade-up">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em]"
+              style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.25)', color: '#38bdf8' }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+              Public Infrastructure Monitoring
+            </span>
+          </div>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center max-w-lg mx-auto">
-                <Button fullWidth variant="primary" size="lg" onClick={() => navigate('/login')}>
-                  Report a Problem
-                </Button>
-                <Button fullWidth variant="outline" size="lg" onClick={() => navigate('/login')}>
-                  Admin Login
-                </Button>
-              </div>
+          {/* Headline */}
+          <h1 className="animate-fade-up-delay1 mt-5 text-center text-4xl font-black leading-tight tracking-tight">
+            Pothole{' '}
+            <span style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              Guard
+            </span>
+          </h1>
+          <p className="animate-fade-up-delay2 mt-3 text-center text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
+            Real-time road complaint tracking. Report issues, monitor progress, ensure accountability.
+          </p>
+
+          {/* Stats grid */}
+          {stats && (
+            <div className="mt-6 grid grid-cols-5 gap-2">
+              <StatCard value={stats.total}                                           label="Total"    color="#38bdf8" delay="0.1s" />
+              <StatCard value={stats.pending}                                         label="Pending"  color="#fb7185" delay="0.15s" />
+              <StatCard value={stats.progressed || 0}                                label="Active"   color="#60a5fa" delay="0.2s" />
+              <StatCard value={stats.underConstruction || 0}                         label="Building" color="#fbbf24" delay="0.25s" />
+              <StatCard value={stats.done}                                            label="Done"     color="#34d399" delay="0.3s" />
             </div>
+          )}
+
+          {/* CTA buttons */}
+          <div className="mt-6 flex flex-col gap-3 animate-fade-up-delay3">
+            <Button fullWidth variant="primary" size="lg" onClick={() => navigate('/login')}>
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 19.5h20L12 2z"/><path d="M12 10v4"/></svg>
+              Report a Problem
+            </Button>
+            <Button fullWidth variant="secondary" size="md" onClick={() => navigate('/login')}>
+              Admin Portal →
+            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Heatmap Section */}
-      <main className="px-4 sm:px-6 py-6 sm:py-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Live Complaint Map</h2>
-            <p className="text-sm sm:text-base text-slate-400">
-              View all reported issues in real-time and track accountability
-            </p>
+      {/* ── Live Map ── */}
+      <div className="px-4 pb-6 space-y-4">
+        <div className="animate-fade-up" style={{ animationDelay: '0.35s' }}>
+          <h2 className="text-lg font-bold text-white mb-0.5">Live Complaint Map</h2>
+          <p className="text-xs text-slate-500">Real-time issues across your city</p>
+        </div>
+
+        <div
+          className="rounded-2xl overflow-hidden animate-fade-up"
+          style={{
+            animationDelay: '0.4s',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+          }}
+        >
+          <div className="h-[300px]">
+            {loading ? (
+              <div className="flex h-full items-center justify-center bg-[#0a1020]">
+                <LoadingSpinner text="Loading map..." />
+              </div>
+            ) : (
+              <GoogleMapsHeatmap complaints={complaints} />
+            )}
           </div>
-
-          <Card className="border border-white/10 bg-white/5 p-0 backdrop-blur-xl overflow-hidden">
-            <div className="h-[400px] sm:h-[500px] lg:h-[600px]">
-              {loading ? (
-                <div className="flex h-full items-center justify-center">
-                  <LoadingSpinner text="Loading map..." />
-                </div>
-              ) : (
-                <GoogleMapsHeatmap complaints={complaints} />
-              )}
-            </div>
-          </Card>
-
           {/* Legend */}
-          <Card className="border border-white/10 bg-white/5 backdrop-blur-xl">
-            <h3 className="text-lg font-bold text-white mb-4">Status Legend</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-[#f87171] border-2 border-[#f87171]"></div>
-                <span className="text-sm text-slate-300">Pending</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-[#60a5fa] border-2 border-[#60a5fa]"></div>
-                <span className="text-sm text-slate-300">Progressed</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-[#fbbf24] border-2 border-[#fbbf24]"></div>
-                <span className="text-sm text-slate-300">Construction</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#00ff00] border-4 border-[#00cc00] shadow-lg shadow-green-500/50"></div>
-                <span className="text-sm font-semibold text-green-400">Done ✓</span>
-              </div>
+          <div className="px-4 py-3" style={{ background: 'rgba(8,13,26,0.9)' }}>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { color: '#fb7185', label: 'Pending' },
+                { color: '#60a5fa', label: 'In Progress' },
+                { color: '#fbbf24', label: 'Construction' },
+                { color: '#34d399', label: 'Resolved ✓' },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+                  <span className="text-[10px] text-slate-400 font-medium">{label}</span>
+                </div>
+              ))}
             </div>
-          </Card>
-
-          {/* Info Cards */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Card className="border border-white/10 bg-white/5 backdrop-blur-xl text-center">
-              <div className="text-4xl mb-3">📍</div>
-              <h3 className="text-lg font-bold text-white mb-2">Report Issues</h3>
-              <p className="text-sm text-slate-400">
-                Citizens can report road problems with GPS location and photos
-              </p>
-            </Card>
-            <Card className="border border-white/10 bg-white/5 backdrop-blur-xl text-center">
-              <div className="text-4xl mb-3">🗺️</div>
-              <h3 className="text-lg font-bold text-white mb-2">Track Progress</h3>
-              <p className="text-sm text-slate-400">
-                Monitor complaint status and see real-time updates on the map
-              </p>
-            </Card>
-            <Card className="border border-white/10 bg-white/5 backdrop-blur-xl text-center">
-              <div className="text-4xl mb-3">✅</div>
-              <h3 className="text-lg font-bold text-white mb-2">Ensure Accountability</h3>
-              <p className="text-sm text-slate-400">
-                Public transparency ensures timely resolution of infrastructure issues
-              </p>
-            </Card>
           </div>
         </div>
-      </main>
+
+        {/* Info cards */}
+        <div className="grid grid-cols-3 gap-3">
+          <InfoCard emoji="📍" title="Report" desc="GPS + photo complaint submission" delay="0.45s" />
+          <InfoCard emoji="🗺️" title="Track" desc="Real-time status updates on map" delay="0.5s" />
+          <InfoCard emoji="✅" title="Resolve" desc="Public accountability & transparency" delay="0.55s" />
+        </div>
+      </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-slate-950/90 backdrop-blur-xl mt-12 py-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center text-sm text-slate-400">
-          <p>© {new Date().getFullYear()} Pothole Guard. Making roads safer through community reporting.</p>
-        </div>
+      <footer className="px-4 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <p className="text-center text-[10px] text-slate-600">
+          © {new Date().getFullYear()} Pothole Guard · Making roads safer through community reporting
+        </p>
       </footer>
     </div>
   );

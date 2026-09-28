@@ -73,7 +73,7 @@ export const UserDashboardPage: React.FC = () => {
               <p className="text-sm text-slate-400">Reports</p>
             </Card>
             <Card className="border border-white/10 bg-white/5 text-center backdrop-blur-xl">
-              <div className="text-2xl font-black text-emerald-400">{stats.completed}</div>
+              <div className="text-2xl font-black text-emerald-400">{stats.done}</div>
               <p className="text-sm text-slate-400">Resolved</p>
             </Card>
           </div>

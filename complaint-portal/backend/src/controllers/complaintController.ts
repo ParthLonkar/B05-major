@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as dataService from '../utils/database';
-import { sendComplaintReceipt } from '../utils/email';
+import { sendComplaintReceipt, sendComplaintStatusUpdate } from '../utils/email';
 
 /**
  * Get all complaints
@@ -52,32 +52,43 @@ export const getComplaintById = async (req: Request, res: Response): Promise<voi
 };
 
 /**
- * Create new complaint
+ * Create new complaint (handles JSON or multipart/form-data file uploads)
  */
 export const createComplaint = async (req: Request, res: Response): Promise<void> => {
   try {
     const { fullName, mobileNumber, email, category, description, latitude, longitude, address, severity, imagePreview } = req.body;
 
-    if (!fullName || !mobileNumber || !category || !description || latitude === undefined || longitude === undefined) {
+    const latNum = latitude !== undefined && latitude !== null ? Number(latitude) : undefined;
+    const lngNum = longitude !== undefined && longitude !== null ? Number(longitude) : undefined;
+
+    if (!fullName || !mobileNumber || !email || !category || !description || latNum === undefined || Number.isNaN(latNum) || lngNum === undefined || Number.isNaN(lngNum)) {
       res.status(400).json({
         success: false,
-        error: 'Missing required fields',
+        error: 'Full name, mobile number, email, category, description, and location are required',
       });
       return;
     }
 
-    const newComplaint = await dataService.createComplaint({
-      fullName,
-      mobileNumber,
-      email,
-      category,
-      description,
-      latitude,
-      longitude,
-      address: address || 'Unknown Location',
-      severity: severity || 'Medium',
-      imagePreview,
-    });
+    let uploadedFilePath: string | undefined = undefined;
+    if (req.file) {
+      uploadedFilePath = `/uploads/complaints/${req.file.filename}`;
+    }
+
+    const newComplaint = await dataService.createComplaint(
+      {
+        fullName,
+        mobileNumber,
+        email,
+        category,
+        description,
+        latitude: latNum,
+        longitude: lngNum,
+        address: address || 'Unknown Location',
+        severity: severity || 'Medium',
+        imagePreview,
+      },
+      uploadedFilePath
+    );
 
     const emailSent = await sendComplaintReceipt(newComplaint);
 
@@ -121,6 +132,15 @@ export const updateComplaintStatus = async (req: Request, res: Response): Promis
       return;
     }
 
+    const existingComplaint = await dataService.getComplaintById(id);
+    if (!existingComplaint) {
+      res.status(404).json({
+        success: false,
+        error: 'Complaint not found',
+      });
+      return;
+    }
+
     const updatedComplaint = await dataService.updateComplaintStatus(id, status);
 
     if (!updatedComplaint) {
@@ -131,10 +151,15 @@ export const updateComplaintStatus = async (req: Request, res: Response): Promis
       return;
     }
 
+    const statusChanged = existingComplaint.status !== updatedComplaint.status;
+    const emailSent = await sendComplaintStatusUpdate(updatedComplaint);
+
     res.json({
       success: true,
       data: updatedComplaint,
       message: 'Complaint status updated successfully',
+      statusChanged,
+      emailSent,
     });
   } catch (error) {
     res.status(500).json({

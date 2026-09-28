@@ -31,8 +31,15 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     console.error('API Error:', error.response?.data || error.message);
-    throw error;
+    return Promise.reject(error);
   }
 );
 
@@ -46,7 +53,31 @@ export const complaintApi = {
   },
 
   create: async (data: any): Promise<ApiResponse<Complaint>> => {
-    const response = (await axiosInstance.post('/complaints', data)) as ApiResponse<Complaint>;
+    let payload = data;
+    let config = {};
+
+    if (data.imageFile instanceof File) {
+      const formData = new FormData();
+      formData.append('fullName', data.fullName);
+      formData.append('mobileNumber', data.mobileNumber);
+      if (data.email) formData.append('email', data.email);
+      formData.append('category', data.category);
+      formData.append('description', data.description);
+      formData.append('latitude', String(data.latitude));
+      formData.append('longitude', String(data.longitude));
+      formData.append('address', data.address);
+      formData.append('severity', data.severity);
+      formData.append('image', data.imageFile);
+
+      payload = formData;
+      config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      };
+    }
+
+    const response = (await axiosInstance.post('/complaints', payload, config)) as ApiResponse<Complaint>;
     if (response.success) {
       notifyComplaintsChanged();
     }

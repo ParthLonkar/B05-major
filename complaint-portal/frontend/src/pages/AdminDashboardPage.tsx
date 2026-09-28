@@ -13,6 +13,7 @@ import { complaintApi, dashboardApi } from '../services/api';
 import { Complaint, DashboardStats } from '../types';
 import { useComplaintSync } from '../hooks/useComplaintSync';
 import { Input } from '../components/ui/Input';
+import { getImageUrl } from '../utils/imageUtils';
 
 const PAGE_SIZE = 6;
 
@@ -90,7 +91,11 @@ export const AdminDashboardPage: React.FC = () => {
       if (response.success && response.data) {
         await fetchData();
         setSelectedComplaint(response.data);
-        addToast(`Status updated to ${newStatus}`, 'success');
+        if (response.emailSent) {
+          addToast(`Status updated to ${newStatus}. Email sent to the reporter.`, 'success');
+        } else {
+          addToast(`Status updated, but the reporter email could not be sent.`, 'error');
+        }
       } else {
         addToast(response.error || 'Failed to update status', 'error');
       }
@@ -432,7 +437,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             {selectedComplaint.imagePreview && (
-              <img src={selectedComplaint.imagePreview} alt="Complaint" className="h-36 w-full rounded-2xl object-cover" />
+              <img src={getImageUrl(selectedComplaint.imagePreview)} alt="Complaint" className="h-36 w-full rounded-2xl object-cover" />
             )}
 
             <div className="text-xs text-slate-400">

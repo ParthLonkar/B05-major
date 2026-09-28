@@ -1,5 +1,5 @@
 /**
- * Reusable Card Component
+ * Premium Glass-Morphism Card Component
  */
 
 import React from 'react';
@@ -11,6 +11,9 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   clickable?: boolean;
   elevated?: boolean;
+  /** Wrap with a 1px gradient border */
+  gradient?: boolean;
+  noPadding?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -20,26 +23,43 @@ export const Card: React.FC<CardProps> = ({
   className = '',
   clickable = false,
   elevated = false,
+  gradient = false,
+  noPadding = false,
   ...props
 }) => {
-  return (
+  const inner = (
     <div
       className={`
-        bg-white dark:bg-gray-800 rounded-2xl p-5 transition-all duration-200
-        ${elevated ? 'shadow-xl' : 'shadow-md'}
-        ${clickable ? 'hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer' : ''}
-        border border-gray-100 dark:border-gray-700
+        glass-card rounded-2xl
+        ${noPadding ? '' : 'p-5'}
+        ${elevated ? 'shadow-[0_8px_40px_rgba(0,0,0,0.5)]' : ''}
+        ${clickable ? 'glass-card-hover cursor-pointer' : ''}
         ${className}
       `}
       {...props}
     >
       {title && (
         <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
-          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
+          <h3 className="text-base font-bold text-white">{title}</h3>
+          {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
         </div>
       )}
       {children}
     </div>
   );
+
+  if (gradient) {
+    return (
+      <div
+        className="rounded-2xl p-px"
+        style={{
+          background: 'linear-gradient(135deg, rgba(14,165,233,0.4), rgba(124,58,237,0.3), rgba(6,182,212,0.25))',
+        }}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  return inner;
 };

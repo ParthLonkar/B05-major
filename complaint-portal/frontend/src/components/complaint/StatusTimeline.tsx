@@ -65,7 +65,7 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({
               <h4 className={`font-semibold ${index <= currentIndex ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
                 {status}
               </h4>
-              {index === currentIndex && currentStatus !== 'Completed' && estimatedCompletion && (
+              {index === currentIndex && currentStatus !== 'Done' && estimatedCompletion && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Est. by {new Date(estimatedCompletion).toLocaleDateString()}
                 </p>

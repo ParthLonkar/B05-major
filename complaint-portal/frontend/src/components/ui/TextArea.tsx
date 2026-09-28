@@ -1,8 +1,8 @@
 /**
- * Reusable TextArea Component
+ * Premium Dark-Glass TextArea Component
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -19,45 +19,61 @@ export const TextArea: React.FC<TextAreaProps> = ({
   charLimit,
   fullWidth = true,
   className = '',
-  value = '',
+  value,
+  onChange,
   ...props
 }) => {
-  const charCount = typeof value === 'string' ? value.length : 0;
+  const [focused, setFocused] = useState(false);
+  const currentLength = typeof value === 'string' ? value.length : 0;
+  const nearLimit = charLimit && currentLength >= charLimit * 0.85;
 
   return (
     <div className={fullWidth ? 'w-full' : ''}>
       {label && (
-        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          {label}
-          {props.required && <span className="text-red-500 ml-1">*</span>}
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-sm font-semibold text-slate-300">
+            {label}
+            {props.required && <span className="text-rose-400 ml-1">*</span>}
+          </label>
+          {charLimit && (
+            <span
+              className={`text-xs font-medium transition-colors ${
+                currentLength >= charLimit
+                  ? 'text-rose-400'
+                  : nearLimit
+                  ? 'text-amber-400'
+                  : 'text-slate-500'
+              }`}
+            >
+              {currentLength}/{charLimit}
+            </span>
+          )}
+        </div>
       )}
 
       <textarea
+        value={value}
+        onChange={onChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        maxLength={charLimit}
         className={`
-          w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600
-          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-          placeholder-gray-400 dark:placeholder-gray-500
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-          transition-all duration-200 resize-none
-          ${error ? 'border-red-500 focus:ring-red-500' : ''}
+          w-full rounded-xl px-4 py-3 text-sm text-slate-100 resize-none
+          bg-white/5 border transition-all duration-200
+          placeholder:text-slate-600
+          ${focused
+            ? 'border-blue-500/60 bg-white/7 shadow-[0_0_0_3px_rgba(14,165,233,0.15)] outline-none'
+            : error
+            ? 'border-rose-500/50'
+            : 'border-white/10 hover:border-white/18'
+          }
           ${className}
         `}
-        value={value}
         {...props}
       />
 
-      <div className="flex justify-between items-start mt-1">
-        <div>
-          {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-          {hint && !error && <p className="text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
-        </div>
-        {charLimit && (
-          <p className={`text-xs font-medium ${charCount > charLimit ? 'text-red-500' : 'text-gray-400'}`}>
-            {charCount}/{charLimit}
-          </p>
-        )}
-      </div>
+      {error && <p className="mt-1.5 text-xs text-rose-400">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-slate-500">{hint}</p>}
     </div>
   );
 };

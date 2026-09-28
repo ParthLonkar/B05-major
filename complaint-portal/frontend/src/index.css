@@ -1,24 +1,44 @@
 @import 'leaflet/dist/leaflet.css';
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================
-   ANDROID APP STYLING
+   DESIGN TOKENS / CSS VARIABLES
    ============================================ */
-
-/* Root Configuration */
 :root {
   --safe-area-inset-top: 0px;
   --safe-area-inset-bottom: 0px;
   --safe-area-inset-left: 0px;
   --safe-area-inset-right: 0px;
+
+  /* Brand Colors */
+  --color-brand:    #0ea5e9;
+  --color-accent:   #06b6d4;
+  --color-purple:   #7c3aed;
+  --color-success:  #10b981;
+  --color-danger:   #f43f5e;
+  --color-warning:  #f59e0b;
+
+  /* Surface Colors */
+  --surface-bg:     #080d1a;
+  --surface-card:   rgba(255, 255, 255, 0.04);
+  --surface-border: rgba(255, 255, 255, 0.08);
+
+  /* Gradients */
+  --gradient-brand: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+  --gradient-hero:  linear-gradient(135deg, #0A0F1E 0%, #0d1628 100%);
 }
 
+/* ============================================
+   BASE RESET
+   ============================================ */
 html {
   scroll-behavior: smooth;
   overflow: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -26,6 +46,9 @@ body {
   padding: 0;
   overflow: hidden;
   background: #000;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -34,130 +57,200 @@ body {
   overflow: hidden;
 }
 
-/* Smooth scrolling */
+/* ============================================
+   PREMIUM SCROLLBARS
+   ============================================ */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #e2e8f0;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
-/* Remove default scrollbar on Chrome */
 *::-webkit-scrollbar {
-  width: 8px;
+  width: 3px;
+  height: 3px;
 }
 
 *::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* Dark mode scrollbar */
-@media (prefers-color-scheme: dark) {
-  * {
-    scrollbar-color: #475569 #1f2937;
+/* ============================================
+   GLASS MORPHISM UTILITIES
+   ============================================ */
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  *::-webkit-scrollbar-track {
-    background: #1f2937;
+  .glass-sm {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  *::-webkit-scrollbar-thumb {
-    background: #475569;
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
-  *::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+  .glass-card-hover {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card-hover:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* Gradient border card wrapper */
+  .gradient-border {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(124, 58, 237, 0.3), rgba(6, 182, 212, 0.3));
+    padding: 1px;
+    border-radius: inherit;
+  }
+
+  .gradient-border > * {
+    border-radius: inherit;
+  }
+
+  /* Premium button */
+  .btn-primary {
+    background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+    box-shadow: 0 4px 15px rgba(14, 165, 233, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+  }
+
+  .btn-glass {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    transition: all 0.2s ease;
+  }
+
+  .btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Input glass */
+  .input-glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+    transition: all 0.2s ease;
+  }
+
+  .input-glass:focus {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(14, 165, 233, 0.6);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+    outline: none;
+  }
+
+  .input-glass::placeholder {
+    color: rgba(148, 163, 184, 0.5);
   }
 }
 
 /* ============================================
-   ANDROID ANIMATIONS
+   ANIMATED GRADIENT BACKGROUND ORBS
    ============================================ */
-
-@keyframes slideInFromBottom {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.animated-bg {
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.animated-bg::before,
+.animated-bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
 }
 
-@keyframes slideInFromRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.animated-bg::before {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+  top: -100px;
+  right: -80px;
+  animation: orb1 8s ease-in-out infinite;
 }
 
-@keyframes slideInFromLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes ripple {
-  0% {
-    transform: scale(0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-  }
+.animated-bg::after {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 70%);
+  bottom: 100px;
+  left: -60px;
+  animation: orb2 10s ease-in-out infinite;
 }
 
 /* ============================================
-   MATERIAL DESIGN 3 COMPONENTS
+   SHIMMER LOADER
+   ============================================ */
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* ============================================
+   MATERIAL DESIGN COMPONENTS
    ============================================ */
 
-/* Floating Action Button */
+/* FAB */
 .fab {
-  @apply rounded-full shadow-lg hover:shadow-xl transition-all duration-300;
-  animation: pulseGlow 2s infinite;
+  background: var(--gradient-brand);
+  @apply rounded-full shadow-glow-blue;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fab:hover {
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.55);
+  transform: scale(1.05) translateY(-2px);
 }
 
 .fab:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
-/* Ripple Effect */
+/* Ripple */
 .ripple-effect {
   position: relative;
   overflow: hidden;
@@ -170,70 +263,140 @@ body {
   left: 50%;
   width: 20px;
   height: 20px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  animation: ripple 0.6s ease-out;
+  transform: translate(-50%, -50%) scale(0);
+  animation: rippleAnim 0.6s ease-out;
   pointer-events: none;
+}
+
+@keyframes rippleAnim {
+  to { transform: translate(-50%, -50%) scale(8); opacity: 0; }
 }
 
 /* Elevated Card */
 .elevated-card {
-  @apply rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  @apply rounded-2xl;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
 }
 
-.dark .elevated-card {
-  background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.9) 100%);
+.elevated-card:hover {
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
 }
 
 /* Bottom Sheet */
 .bottom-sheet {
-  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl;
-  animation: slideInFromBottom 0.3s ease-out;
+  @apply fixed bottom-0 left-0 right-0 rounded-t-3xl;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .bottom-sheet::before {
   content: '';
   position: absolute;
-  top: 8px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 40px;
+  width: 36px;
   height: 4px;
-  background: #d1d5db;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
 }
 
-/* Snackbar */
-.snackbar {
-  @apply fixed bottom-20 left-4 right-4 bg-gray-900 text-white rounded-lg p-4 shadow-xl;
-  animation: slideInFromBottom 0.3s ease-out;
-  z-index: 50;
+/* Icon Button */
+.icon-button {
+  @apply inline-flex items-center justify-center p-2 rounded-full;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
 }
 
-/* Material Icons Button */
-.icon-button {
-  @apply inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200;
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .icon-button:active {
-  @apply bg-gray-200 dark:bg-gray-700;
+  transform: scale(0.92);
 }
 
-/* Android Page Transitions */
+/* ============================================
+   PAGE TRANSITIONS
+   ============================================ */
 .page-enter {
-  animation: slideInFromRight 0.3s ease-out;
+  animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .page-exit {
-  animation: slideInFromLeft 0.3s ease-out reverse;
+  animation: fadeOut 0.25s ease-in both;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ============================================
+   STATUS BADGE VARIANTS
+   ============================================ */
+.badge-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badge-progressed {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+.badge-construction {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.badge-done {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badge-critical {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.badge-high {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.25);
+}
+
+.badge-medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badge-low {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.25);
 }
 
 /* ============================================
    UTILITY CLASSES
    ============================================ */
-
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -255,123 +418,81 @@ body {
   overflow: hidden;
 }
 
-/* Safe Area Support */
-.safe-area-top {
-  padding-top: max(env(safe-area-inset-top), 0px);
-}
+/* Safe Area */
+.safe-area-top    { padding-top: max(env(safe-area-inset-top), 0px); }
+.safe-area-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+.safe-area-left   { padding-left: max(env(safe-area-inset-left), 0px); }
+.safe-area-right  { padding-right: max(env(safe-area-inset-right), 0px); }
 
-.safe-area-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 0px);
-}
-
-.safe-area-left {
-  padding-left: max(env(safe-area-inset-left), 0px);
-}
-
-.safe-area-right {
-  padding-right: max(env(safe-area-inset-right), 0px);
-}
-
-/* Touch Target Size (48px minimum for Android) */
+/* Touch targets */
 .touch-target {
   @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
 }
 
-/* Better touch feedback */
 .touch-feedback {
   @apply transition-all duration-150 active:scale-95 active:opacity-80;
 }
 
-/* Prevent text selection on interactive elements */
 .no-select {
   -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
 }
 
-/* Smooth scrolling container */
-.scroll-smooth {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+/* Typography */
+.text-gradient {
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 60%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Android Typography */
-.android-headline {
-  @apply text-2xl font-bold tracking-tight;
+.text-gradient-white {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.android-title {
-  @apply text-lg font-semibold;
+/* Glow text */
+.text-glow-blue {
+  text-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
 }
 
-.android-body {
-  @apply text-base font-normal;
+/* Noise overlay for depth */
+.noise {
+  position: relative;
 }
 
-.android-label {
-  @apply text-xs font-semibold uppercase tracking-wider;
-}
-
-/* Haptic Feedback Simulation */
-.haptic {
-  transition: all 0.1s ease-in-out;
-}
-
-.haptic:active {
-  transform: scale(0.98);
+.noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
-
-/* Extra Small Devices (tiny phones, less than 375px) */
 @media (max-width: 374px) {
-  .xs\:hidden {
-    display: none !important;
-  }
-  
-  .xs\:inline {
-    display: inline !important;
-  }
-
-  html {
-    font-size: 14px;
-  }
+  html { font-size: 14px; }
+  .xs\:hidden { display: none !important; }
+  .xs\:inline { display: inline !important; }
 }
 
-/* Mobile First - Full Screen */
 @media (max-width: 640px) {
-  #root {
-    width: 100%;
-    height: 100%;
-  }
+  #root { width: 100%; height: 100%; }
 
-  .sm\:hidden {
-    display: none !important;
-  }
-
-  /* Improve touch target sizes on mobile */
   button, a {
     min-height: 44px;
     min-width: 44px;
   }
 
-  /* Better spacing on mobile */
-  .page-container {
-    padding: 1rem;
-  }
+  .page-container { padding: 1rem; }
 }
 
-/* Tablet - Centered Phone Frame */
-@media (min-width: 641px) and (max-width: 1024px) {
-  .phone-frame {
-    margin: auto;
-  }
-}
-
-/* Desktop - Full Phone Frame */
 @media (min-width: 1025px) {
   #root {
     display: flex;
@@ -380,51 +501,14 @@ body {
   }
 }
 
-/* Landscape Orientation */
 @media (orientation: landscape) and (max-height: 500px) {
-  .hide-on-landscape {
-    display: none;
-  }
-
-  /* Reduce padding in landscape mode */
-  .page-container {
-    padding: 0.5rem;
-  }
-}
-
-/* Very small screens adjustments */
-@media (max-width: 360px) {
-  body {
-    font-size: 14px;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-  }
-
-  h2 {
-    font-size: 1.25rem;
-  }
-
-  h3 {
-    font-size: 1.125rem;
-  }
-}
-
-/* ============================================
-   DARK MODE
-   ============================================ */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  }
+  .hide-on-landscape { display: none; }
+  .page-container { padding: 0.5rem; }
 }
 
 /* ============================================
    ACCESSIBILITY
    ============================================ */
-
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
@@ -433,19 +517,63 @@ body {
   }
 }
 
-/* Focus Visible for Keyboard Navigation */
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-blue-500;
+  outline: 2px solid rgba(14, 165, 233, 0.8);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
-/* High Contrast Mode */
 @media (prefers-contrast: more) {
-  .elevated-card {
-    border: 2px solid currentColor;
-  }
-
-  button {
-    @apply border-2 border-current;
-  }
+  .glass-card { border: 2px solid rgba(255, 255, 255, 0.3); }
+  button { border: 1px solid rgba(255, 255, 255, 0.3); }
 }
 
+/* ============================================
+   KEYFRAMES (referenced by Tailwind config)
+   ============================================ */
+@keyframes orb1 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33%      { transform: translate(30px, -50px) scale(1.1); }
+  66%      { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes orb2 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33%      { transform: translate(-40px, 30px) scale(1.15); }
+  66%      { transform: translate(25px, -25px) scale(0.9); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-12px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(14,165,233,0.3); }
+  50%      { box-shadow: 0 0 35px rgba(14,165,233,0.6), 0 0 60px rgba(14,165,233,0.2); }
+}
+
+@keyframes progress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+@keyframes navPop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}

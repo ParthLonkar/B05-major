@@ -4,6 +4,7 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import { useToast } from './hooks/useToast';
 import { ToastContainer } from './components/ui/Toast';
 import { AndroidPhoneFrame } from './components/layouts/AndroidPhoneFrame';
+import { MaterialBottomNavigation } from './components/common/MaterialBottomNavigation';
 
 import { SplashScreen } from './pages/SplashScreen';
 import { LandingPage } from './pages/LandingPage';
@@ -17,11 +18,7 @@ import { UserDashboardPage } from './pages/UserDashboardPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAppContext();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!isAuthenticated) return <Navigate to="/landing" replace />;
   return <>{children}</>;
 };
 
@@ -32,73 +29,57 @@ const AppContent: React.FC = () => {
 
   return (
     <AndroidPhoneFrame>
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-slate-950 text-slate-100">
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden page-enter">
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#080d1a] text-slate-100">
+        {/* Scrollable page area — leaves room for bottom nav when authenticated */}
+        <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden page-enter ${isAuthenticated ? 'pb-[72px]' : ''}`}>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<Navigate to="/landing" replace />} />
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/splash" element={<SplashScreen />} />
-            <Route path="/login" element={isAuthenticated ? <Navigate to={landingPath} replace /> : <LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
 
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  {isAdmin ? <HomePage /> : <Navigate to="/report" replace />}
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  {isAdmin ? <AdminDashboardPage /> : <Navigate to="/report" replace />}
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/report"
-              element={
-                <ProtectedRoute>
-                  {isAdmin ? <Navigate to="/home" replace /> : <ReportComplaintPage />}
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  {isAdmin ? <Navigate to="/home" replace /> : <UserDashboardPage />}
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/track"
-              element={
-                <ProtectedRoute>
-                  <TrackComplaintPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/complaint/:complaintId"
-              element={
-                <ProtectedRoute>
-                  <TrackComplaintPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/heatmap"
-              element={
-                <ProtectedRoute>
-                  {isAdmin ? <ImprovedHeatmapPage /> : <Navigate to="/report" replace />}
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/home" element={
+              <ProtectedRoute>
+                {isAdmin ? <HomePage /> : <Navigate to="/report" replace />}
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                {isAdmin ? <AdminDashboardPage /> : <Navigate to="/report" replace />}
+              </ProtectedRoute>
+            } />
+            <Route path="/report" element={
+              <ProtectedRoute>
+                {isAdmin ? <Navigate to="/home" replace /> : <ReportComplaintPage />}
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                {isAdmin ? <Navigate to="/home" replace /> : <UserDashboardPage />}
+              </ProtectedRoute>
+            } />
+            <Route path="/track" element={
+              <ProtectedRoute>
+                <TrackComplaintPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/complaint/:complaintId" element={
+              <ProtectedRoute>
+                <TrackComplaintPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/heatmap" element={
+              <ProtectedRoute>
+                {isAdmin ? <ImprovedHeatmapPage /> : <Navigate to="/report" replace />}
+              </ProtectedRoute>
+            } />
 
-            <Route path="*" element={<Navigate to={isAuthenticated ? landingPath : '/login'} replace />} />
+            <Route path="*" element={<Navigate to={isAuthenticated ? landingPath : '/landing'} replace />} />
           </Routes>
         </div>
+
+        {/* Premium bottom navigation (only when logged in) */}
+        <MaterialBottomNavigation />
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
@@ -106,14 +87,12 @@ const AppContent: React.FC = () => {
   );
 };
 
-export const App: React.FC = () => {
-  return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
-    </Router>
-  );
-};
+export const App: React.FC = () => (
+  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  </Router>
+);
 
 export default App;

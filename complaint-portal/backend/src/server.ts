@@ -25,6 +25,9 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+
 const startServer = async () => {
   await initializeDatabase();
 
@@ -61,6 +64,7 @@ const startServer = async () => {
     console.log(`📝 Complaints API: http://localhost:${port}/api/complaints`);
     console.log(`🔐 Auth API: http://localhost:${port}/api/auth`);
     console.log(`📊 Dashboard API: http://localhost:${port}/api/dashboard`);
+    console.log(`🖼️ Static Uploads: http://localhost:${port}/uploads`);
   });
 };
 
