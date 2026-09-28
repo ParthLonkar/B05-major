@@ -133,3 +133,37 @@ pothole-detection-app/
 ## 8) Android app (native)
 
 There is also a native Android client app in `pothole-android-app/` that uses this backend for inference.
+
+## Run pretrained Hugging Face YOLOv8 segmentation on phone photos
+
+This inference-only script downloads `best.pt` from `keremberke/yolov8n-pothole-segmentation`, draws the predicted pothole masks and boxes, and writes annotated images and a CSV under `output/`. It does not train the model. The CSV includes both box area and mask area; optional Depth Anything V2 values remain relative, not physical depth.
+
+Install the Python dependencies from this folder:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Run on one image or recursively on a folder:
+
+```powershell
+python scripts\predict_hf_yolov8_seg.py path\to\road-photo.jpg
+python scripts\predict_hf_yolov8_seg.py path\to\photos --tta
+```
+
+Add relative depth output (Depth Anything V2 Small; **not a measurement in cm**):
+
+```powershell
+python scripts\predict_hf_yolov8_seg.py path\to\photos --depth
+```
+
+Convert box dimensions to approximate centimeters using a known-width reference object visible in the same plane:
+
+```powershell
+python scripts\predict_hf_yolov8_seg.py path\to\road-photo.jpg --ref_width_cm 10 --ref_width_px 125
+```
+
+The default severity width thresholds in `scripts/predict_hf_yolov8_seg.py` are placeholders. Verify and calibrate them against ASTM D6433 or applicable local IRC/road-agency guidance before using severity as an operational decision. Reference-based dimensions and mask area are approximate and do not correct for perspective.

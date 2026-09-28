@@ -5,4 +5,6 @@ pydantic>=2.5,<3
 numpy>=1.23,<2
 pillow>=10,<11
 opencv-python>=4.8,<5
-ultralytics>=8.1,<9
+ultralytics>=8.3.0,<9
+huggingface_hub>=0.25,<1
+transformers>=4.44,<5

@@ -1,326 +1,236 @@
 import bcrypt from 'bcrypt';
-import fs from 'fs';
-import path from 'path';
-import sqlite3 from 'sqlite3';
-import { v4 as uuidv4 } from 'uuid';
+import { Complaint as PrismaComplaint } from '@prisma/client';
 import { Complaint } from '../mock/data';
+import { prisma } from './prisma';
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  password: string; // Stored password hash
+  password: string;
   role: 'user' | 'admin';
   createdAt: string;
 }
 
-interface DatabaseSchema {
-  users: User[];
-  complaints: Complaint[];
-}
-
-const DB_PATH = path.resolve(__dirname, '../../data/portal-db.json');
-const SQLITE_DB_PATH = path.resolve(__dirname, '../../data/portal-auth.db');
-
-const sqliteDb = new sqlite3.Database(SQLITE_DB_PATH, (err) => {
-  if (err) {
-    console.error('Failed to connect to SQLite auth database:', err.message);
-  }
+const toComplaint = (row: PrismaComplaint): Complaint => ({
+  id: String(row.id),
+  complaintId: row.complaintId,
+  fullName: row.fullName,
+  mobileNumber: row.mobileNumber,
+  email: row.email ?? undefined,
+  category: row.category as Complaint['category'],
+  description: row.description,
+  imagePreview: row.imagePreview ?? undefined,
+  latitude: Number(row.latitude),
+  longitude: Number(row.longitude),
+  address: row.address,
+  severity: row.severity as Complaint['severity'],
+  status: row.status as Complaint['status'],
+  createdAt: row.createdAt.toISOString(),
+  updatedAt: row.updatedAt.toISOString(),
+  estimatedCompletion: row.estimatedCompletion?.toISOString(),
+  assignedTo: row.assignedTeam ?? undefined,
+  notes: row.notes ?? undefined,
 });
 
-const runSql = <T = void>(sql: string, params: any[] = []): Promise<T> =>
-  new Promise((resolve, reject) => {
-    sqliteDb.run(sql, params, function (err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(this as unknown as T);
-    });
+const findComplaint = (id: string) => {
+  const numericId = Number(id);
+  return prisma.complaint.findFirst({
+    where: {
+      OR: [
+        { complaintId: id },
+        ...(Number.isSafeInteger(numericId) && numericId > 0 ? [{ id: numericId }] : []),
+      ],
+    },
   });
-
-const getSql = <T = any>(sql: string, params: any[] = []): Promise<T | null> =>
-  new Promise((resolve, reject) => {
-    sqliteDb.get(sql, params, (err, row) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve((row as T) ?? null);
-    });
-  });
-
-const allSql = <T = any>(sql: string, params: any[] = []): Promise<T[]> =>
-  new Promise((resolve, reject) => {
-    sqliteDb.all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve((rows as T[]) ?? []);
-    });
-  });
-
-// Helper functions for JSON file operations
-const readDatabase = (): DatabaseSchema => {
-  try {
-    const data = fs.readFileSync(DB_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    return { users: [], complaints: [] };
-  }
 };
 
-const writeDatabase = (data: DatabaseSchema): void => {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-};
-
-const generateComplaintId = (): string => {
-  const year = new Date().getFullYear();
-  const db = readDatabase();
-
-  const existingNumbers = db.complaints
-    .map((c) => c.complaintId.match(/PTH-\d{4}-(\d{5})/))
-    .filter((match): match is RegExpMatchArray => !!match)
-    .map((match) => Number(match[1]));
-
-  const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-  return `PTH-${year}-${String(nextNumber).padStart(5, '0')}`;
-};
-
-export const initializeDatabase = async () => {
-  try {
-    const dir = path.dirname(SQLITE_DB_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    await runSql(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('user', 'admin')),
-        createdAt TEXT NOT NULL
-      )
-    `);
-
-    const existingAdmin = await getSql<{ id: string }>(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`);
-
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await runSql(
-        `INSERT INTO users (id, name, email, password, role, createdAt) VALUES (?, ?, ?, ?, 'admin', ?)` ,
-        ['admin1', 'Admin', 'admin@complaints.com', hashedPassword, new Date().toISOString()]
-      );
-      console.log('✅ Admin user initialized in SQLite database.');
-    }
-  } catch (error) {
-    console.error('Error initializing database:', error);
-  }
+export const initializeDatabase = async (): Promise<void> => {
+  await prisma.$connect();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) throw new Error('ADMIN_PASSWORD must be set before starting the backend.');
+  await prisma.user.upsert({
+    where: { email: 'admin@complaints.com' },
+    update: {},
+    create: {
+      name: 'Admin',
+      email: 'admin@complaints.com',
+      passwordHash: await bcrypt.hash(adminPassword, 10),
+      role: 'admin',
+    },
+  });
 };
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
-  const row = await getSql<User>(`SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1`, [email]);
-  return row || null;
+  const row = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    name: row.name,
+    email: row.email,
+    password: row.passwordHash,
+    role: row.role === 'admin' ? 'admin' : 'user',
+    createdAt: row.createdAt.toISOString(),
+  };
 };
 
 export const createUser = async (name: string, email: string, password: string): Promise<User> => {
-  const existingUser = await getUserByEmail(email);
-  if (existingUser) {
-    return existingUser;
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser: User = {
-    id: uuidv4(),
-    name,
-    email: email.toLowerCase(),
-    password: hashedPassword,
+  const normalizedEmail = email.toLowerCase();
+  const row = await prisma.user.create({
+    data: {
+      name,
+      email: normalizedEmail,
+      passwordHash: await bcrypt.hash(password, 10),
+      role: 'user',
+    },
+  });
+  return {
+    id: String(row.id),
+    name: row.name,
+    email: row.email,
+    password: row.passwordHash,
     role: 'user',
-    createdAt: new Date().toISOString(),
+    createdAt: row.createdAt.toISOString(),
   };
-
-  await runSql(
-    `INSERT INTO users (id, name, email, password, role, createdAt) VALUES (?, ?, ?, ?, 'user', ?)`,
-    [newUser.id, newUser.name, newUser.email, newUser.password, newUser.createdAt]
-  );
-
-  return newUser;
 };
 
 export const getAllComplaints = async (): Promise<Complaint[]> => {
-  const db = readDatabase();
-  return db.complaints.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const rows = await prisma.complaint.findMany({ orderBy: { createdAt: 'desc' } });
+  return rows.map(toComplaint);
 };
 
 export const getComplaintById = async (id: string): Promise<Complaint | null> => {
-  const db = readDatabase();
-  const complaint = db.complaints.find(
-    (c) => c.complaintId === id || c.id === id
-  );
-  return complaint || null;
+  const row = await findComplaint(id);
+  return row ? toComplaint(row) : null;
 };
 
 export const searchComplaints = async (query: string): Promise<Complaint[]> => {
-  const db = readDatabase();
-  const lowerQuery = query.toLowerCase();
-  
-  const results = db.complaints.filter((c) =>
-    c.complaintId.toLowerCase().includes(lowerQuery) ||
-    c.address.toLowerCase().includes(lowerQuery) ||
-    c.description.toLowerCase().includes(lowerQuery) ||
-    c.fullName.toLowerCase().includes(lowerQuery) ||
-    (c.email && c.email.toLowerCase().includes(lowerQuery)) ||
-    c.mobileNumber.includes(lowerQuery)
-  );
-
-  return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const rows = await prisma.complaint.findMany({
+    where: {
+      OR: [
+        { complaintId: { contains: query } },
+        { address: { contains: query } },
+        { description: { contains: query } },
+        { fullName: { contains: query } },
+        { email: { contains: query } },
+        { mobileNumber: { contains: query } },
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return rows.map(toComplaint);
 };
 
 export const createComplaint = async (
   data: Omit<Complaint, 'id' | 'complaintId' | 'createdAt' | 'updatedAt' | 'estimatedCompletion' | 'assignedTo' | 'notes' | 'status'>,
   uploadedFilePath?: string
 ): Promise<Complaint> => {
-  const complaintId = generateComplaintId();
-  const estimatedCompletion = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const year = new Date().getFullYear();
+  const prefix = `PTH-${year}-`;
+  const latest = await prisma.complaint.findFirst({
+    where: { complaintId: { startsWith: prefix } },
+    orderBy: { complaintId: 'desc' },
+    select: { complaintId: true },
+  });
+  const latestNumber = latest ? Number(latest.complaintId.slice(prefix.length)) : 0;
+  const complaintId = `${prefix}${String(latestNumber + 1).padStart(5, '0')}`;
 
-  const newComplaint: Complaint = {
-    id: uuidv4(),
-    complaintId,
-    fullName: data.fullName,
-    mobileNumber: data.mobileNumber,
-    email: data.email,
-    category: data.category,
-    description: data.description,
-    latitude: data.latitude,
-    longitude: data.longitude,
-    address: data.address,
-    severity: data.severity,
-    status: 'Pending',
-    imagePreview: uploadedFilePath || data.imagePreview,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    estimatedCompletion,
-  };
-
-  const db = readDatabase();
-  db.complaints.push(newComplaint);
-  writeDatabase(db);
-
-  return newComplaint;
+  const row = await prisma.complaint.create({
+    data: {
+      complaintId,
+      fullName: data.fullName,
+      mobileNumber: data.mobileNumber,
+      email: data.email || null,
+      category: data.category,
+      description: data.description,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      address: data.address,
+      severity: data.severity,
+      imagePreview: uploadedFilePath || data.imagePreview || null,
+      estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  });
+  return toComplaint(row);
 };
 
 export const updateComplaintStatus = async (
   id: string,
   status: 'Pending' | 'Progressed' | 'Under Construction' | 'Done'
 ): Promise<Complaint | null> => {
-  const db = readDatabase();
-  const index = db.complaints.findIndex((c) => c.complaintId === id || c.id === id);
-  
-  if (index === -1) return null;
+  const existing = await findComplaint(id);
+  if (!existing) return null;
 
-  const complaint = db.complaints[index];
-  
-  let assignedTo: string | undefined = complaint.assignedTo;
-  let notes: string | undefined = complaint.notes;
-  let estimatedCompletion: string | undefined = complaint.estimatedCompletion;
-
+  let assignedTeam = existing.assignedTeam;
+  let notes = existing.notes;
+  let estimatedCompletion = existing.estimatedCompletion;
   if (status === 'Progressed') {
-    assignedTo = `Team ${Math.floor(Math.random() * 5) + 1}`;
+    assignedTeam = `Team ${Math.floor(Math.random() * 5) + 1}`;
     notes = 'Work has been initiated and team assigned.';
-  }
-
-  if (status === 'Under Construction') {
+  } else if (status === 'Under Construction') {
     notes = 'Construction work is actively underway on site.';
-  }
-
-  if (status === 'Done') {
-    estimatedCompletion = undefined;
+  } else if (status === 'Done') {
+    estimatedCompletion = null;
     notes = 'Work completed successfully. Issue resolved.';
   }
 
-  db.complaints[index] = {
-    ...complaint,
-    status,
-    assignedTo,
-    notes,
-    estimatedCompletion,
-    updatedAt: new Date().toISOString(),
-  };
-
-  writeDatabase(db);
-  return db.complaints[index];
+  const row = await prisma.complaint.update({
+    where: { id: existing.id },
+    data: { status, assignedTeam, notes, estimatedCompletion },
+  });
+  return toComplaint(row);
 };
 
 export const deleteComplaint = async (id: string): Promise<boolean> => {
-  const db = readDatabase();
-  const index = db.complaints.findIndex((c) => c.complaintId === id || c.id === id);
-  
-  if (index === -1) return false;
-
-  try {
-    db.complaints.splice(index, 1);
-    writeDatabase(db);
-    return true;
-  } catch (error) {
-    console.error('Failed to delete complaint:', error);
-    return false;
-  }
+  const existing = await findComplaint(id);
+  if (!existing) return false;
+  await prisma.complaint.delete({ where: { id: existing.id } });
+  return true;
 };
 
 export const getDashboardStats = async () => {
-  const db = readDatabase();
-  const complaints = db.complaints;
-
-  const total = complaints.length;
+  const complaints = await prisma.complaint.findMany({ select: { status: true, severity: true } });
   const pending = complaints.filter((c) => c.status === 'Pending').length;
   const progressed = complaints.filter((c) => c.status === 'Progressed').length;
   const underConstruction = complaints.filter((c) => c.status === 'Under Construction').length;
   const done = complaints.filter((c) => c.status === 'Done').length;
-
-  const lowSeverity = complaints.filter((c) => c.severity === 'Low').length;
-  const mediumSeverity = complaints.filter((c) => c.severity === 'Medium').length;
-  const highSeverity = complaints.filter((c) => c.severity === 'High').length;
-  const criticalSeverity = complaints.filter((c) => c.severity === 'Critical').length;
-
   return {
-    total,
+    total: complaints.length,
     pending,
     progressed,
     underConstruction,
     done,
     severityCounts: {
-      low: lowSeverity,
-      medium: mediumSeverity,
-      high: highSeverity,
-      critical: criticalSeverity,
+      low: complaints.filter((c) => c.severity === 'Low').length,
+      medium: complaints.filter((c) => c.severity === 'Medium').length,
+      high: complaints.filter((c) => c.severity === 'High').length,
+      critical: complaints.filter((c) => c.severity === 'Critical').length,
     },
-    statusCounts: {
-      pending,
-      progressed,
-      underConstruction,
-      done,
-    },
+    statusCounts: { pending, progressed, underConstruction, done },
   };
 };
 
 export const getHeatmapData = async () => {
-  const db = readDatabase();
-  
-  return db.complaints.map((c) => ({
-    id: c.complaintId,
-    latitude: c.latitude,
-    longitude: c.longitude,
-    severity: c.severity,
-    status: c.status,
-    description: c.description,
-    category: c.category,
-    createdAt: c.createdAt,
+  const rows = await prisma.complaint.findMany({
+    select: {
+      complaintId: true,
+      latitude: true,
+      longitude: true,
+      severity: true,
+      status: true,
+      description: true,
+      category: true,
+      createdAt: true,
+    },
+  });
+  return rows.map((row) => ({
+    id: row.complaintId,
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
+    severity: row.severity,
+    status: row.status,
+    description: row.description,
+    category: row.category,
+    createdAt: row.createdAt.toISOString(),
   }));
 };

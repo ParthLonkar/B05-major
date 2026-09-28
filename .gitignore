@@ -1,2 +1,28 @@
+# Default ignored files
+/shelf/
+/workspace.xml
 
-pothole-android-app/.gradle/
+# Secrets and machine-local configuration
+**/.env
+**/.env.*
+!**/.env.example
+**/local.properties
+
+# Dependencies, caches, build outputs, and model inference results
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.gradle/
+**/build/
+**/dist/
+**/runs/
+**/output/
+**/.idea/
+**/.vscode/
+
+# Local complaint records, authentication DB, and uploaded citizen photos
+complaint-portal/backend/data/*.db
+complaint-portal/backend/data/portal-db.json
+complaint-portal/backend/uploads/complaints/*
+!complaint-portal/backend/uploads/complaints/.gitkeep

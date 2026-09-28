@@ -51,7 +51,9 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // 1. Seed Admin User
-  const adminHashedPassword = await bcrypt.hash('admin123', 10);
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) throw new Error('Set ADMIN_PASSWORD in the backend .env file before seeding.');
+  const adminHashedPassword = await bcrypt.hash(adminPassword, 10);
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@complaints.com' },
     update: {
@@ -68,8 +70,11 @@ async function main() {
   });
   console.log('✅ Admin user created/verified:', adminUser.email);
 
-  // 2. Clear existing complaints if re-seeding
-  await prisma.complaint.deleteMany({});
+  // Preserve existing user data. Seed sample complaints only on an empty database.
+  if (await prisma.complaint.count()) {
+    console.log('ℹ️ Complaints already exist; leaving them unchanged.');
+    return;
+  }
 
   // 3. Seed 30 mock complaints
   let complaintCounter = 1;
