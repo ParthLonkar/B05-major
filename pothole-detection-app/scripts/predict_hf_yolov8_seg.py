@@ -1,8 +1,9 @@
 """Detect and segment potholes in phone photos with a Hugging Face YOLOv8 model.
 
 This script only runs inference. It does not train or modify model weights.
-Optional Depth Anything V2 output is relative and must not be interpreted as
-centimeters without an external calibration procedure.
+Optional Depth Anything V2 Metric Outdoor output is combined with the YOLO
+instance mask to produce an experimental apparent-depth estimate in meters.
+Validate estimates against measured potholes before using severity operationally.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from typing import Any
 import cv2
 import numpy as np
 from huggingface_hub import hf_hub_download, list_repo_files
+from PIL import Image
 from ultralytics import YOLO
 
 
@@ -28,17 +30,14 @@ POTHOLE_CLASS_ID = 0
 IMAGE_SIZE = 768
 CONFIDENCE = 0.25
 
-# Editable starter thresholds only. Verify these against ASTM D6433 or local
+# Editable starting thresholds only. Verify them against ASTM D6433 or local
 # IRC/road-agency guidance and field measurements before operational use.
 LOW_WIDTH_MAX_CM = 20.0
 MEDIUM_WIDTH_MAX_CM = 50.0
+DEPTH_MEDIUM_THRESHOLD_M = 0.025
+DEPTH_HIGH_THRESHOLD_M = 0.050
 
-# Relative depth values vary by image and are not physical units. Leave these
-# disabled until local calibration establishes useful, validated thresholds.
-RELATIVE_DEPTH_MEDIUM_THRESHOLD: float | None = None
-RELATIVE_DEPTH_HIGH_THRESHOLD: float | None = None
-
-DEPTH_REPO = "depth-anything/Depth-Anything-V2-Small-hf"
+DEPTH_REPO = "depth-anything/Depth-Anything-V2-Metric-Outdoor-Base-hf"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 CSV_FIELDS = [
     "image",
@@ -56,19 +55,14 @@ CSV_FIELDS = [
     "mask_area_cm2",
     "width_cm",
     "height_cm",
-    "relative_depth",
+    "estimated_depth_m",
     "severity",
     "annotated_image",
 ]
 
 
-def classify_severity(width_cm: float | None, relative_depth: float | None = None) -> str:
-    """Return a provisional low/medium/high class from editable thresholds.
-
-    If width is unknown, relative depth is only used when calibrated threshold
-    constants have been enabled above. With neither valid measurement, return
-    medium as an explicit unknown/provisional bucket.
-    """
+def classify_severity(width_cm: float | None, estimated_depth_m: float | None = None) -> str:
+    """Combine provisional width and mask-derived apparent-depth bands."""
     severity_rank = 0
 
     if width_cm is not None:
@@ -77,26 +71,13 @@ def classify_severity(width_cm: float | None, relative_depth: float | None = Non
         elif width_cm > LOW_WIDTH_MAX_CM:
             severity_rank = 1
 
-    if relative_depth is not None:
-        depth_magnitude = abs(relative_depth)
-        if (
-            RELATIVE_DEPTH_HIGH_THRESHOLD is not None
-            and depth_magnitude >= RELATIVE_DEPTH_HIGH_THRESHOLD
-        ):
+    if estimated_depth_m is not None:
+        if estimated_depth_m >= DEPTH_HIGH_THRESHOLD_M:
             severity_rank = max(severity_rank, 2)
-        elif (
-            RELATIVE_DEPTH_MEDIUM_THRESHOLD is not None
-            and depth_magnitude >= RELATIVE_DEPTH_MEDIUM_THRESHOLD
-        ):
+        elif estimated_depth_m >= DEPTH_MEDIUM_THRESHOLD_M:
             severity_rank = max(severity_rank, 1)
 
-    if width_cm is None and (
-        relative_depth is None
-        or (
-            RELATIVE_DEPTH_MEDIUM_THRESHOLD is None
-            and RELATIVE_DEPTH_HIGH_THRESHOLD is None
-        )
-    ):
+    if width_cm is None and estimated_depth_m is None:
         return "medium"
 
     return ("low", "medium", "high")[severity_rank]
@@ -178,47 +159,40 @@ def to_numpy_depth(depth_result: dict[str, Any], image_size: tuple[int, int]) ->
     return depth
 
 
-def relative_box_depth(
+def mask_apparent_depth_m(
     depth_map: np.ndarray,
-    box: tuple[int, int, int, int],
+    instance_mask: np.ndarray,
 ) -> float | None:
-    """Median depth difference: central 60% of box minus an outside ring.
+    """Estimate pothole apparent depth as mask-vs-nearby-road median range.
 
-    This is a model-relative value, not a metric depth in cm or meters.
+    Positive values mean the masked region is farther from the camera. This
+    single-image estimate is not a survey-grade physical pothole measurement.
     """
-    x1, y1, x2, y2 = box
-    box_width, box_height = x2 - x1, y2 - y1
-    if box_width < 2 or box_height < 2:
+    if instance_mask.shape != depth_map.shape:
+        instance_mask = cv2.resize(
+            instance_mask.astype(np.uint8),
+            (depth_map.shape[1], depth_map.shape[0]),
+            interpolation=cv2.INTER_NEAREST,
+        ).astype(bool)
+    if not np.any(instance_mask):
         return None
 
-    center_x1 = x1 + int(round(box_width * 0.20))
-    center_x2 = x2 - int(round(box_width * 0.20))
-    center_y1 = y1 + int(round(box_height * 0.20))
-    center_y2 = y2 - int(round(box_height * 0.20))
-    inside = depth_map[center_y1:center_y2, center_x1:center_x2]
-
-    pad_x = max(2, int(round(box_width * 0.20)))
-    pad_y = max(2, int(round(box_height * 0.20)))
-    image_height, image_width = depth_map.shape
-    outer_x1, outer_x2 = max(0, x1 - pad_x), min(image_width, x2 + pad_x)
-    outer_y1, outer_y2 = max(0, y1 - pad_y), min(image_height, y2 + pad_y)
-    surrounding_region = depth_map[outer_y1:outer_y2, outer_x1:outer_x2]
-
-    ring_mask = np.ones(surrounding_region.shape, dtype=bool)
-    box_x1, box_x2 = max(0, x1 - outer_x1), min(outer_x2 - outer_x1, x2 - outer_x1)
-    box_y1, box_y2 = max(0, y1 - outer_y1), min(outer_y2 - outer_y1, y2 - outer_y1)
-    ring_mask[box_y1:box_y2, box_x1:box_x2] = False
-    surrounding = surrounding_region[ring_mask]
-
-    inside = inside[np.isfinite(inside)]
-    surrounding = surrounding[np.isfinite(surrounding)]
+    kernel_size = max(3, int(round(min(depth_map.shape) * 0.03)) | 1)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+    expanded = cv2.dilate(instance_mask.astype(np.uint8), kernel).astype(bool)
+    ring = expanded & ~instance_mask
+    inside = depth_map[instance_mask]
+    surrounding = depth_map[ring]
+    inside = inside[np.isfinite(inside) & (inside > 0)]
+    surrounding = surrounding[np.isfinite(surrounding) & (surrounding > 0)]
     if inside.size == 0 or surrounding.size == 0:
         return None
-    return float(np.median(inside) - np.median(surrounding))
+    # Clamp negative offsets: only increased camera distance is counted as a depression.
+    return float(max(0.0, np.median(inside) - np.median(surrounding)))
 
 
 def prepare_depth_pipeline():
-    """Load Depth Anything V2 Small on CUDA when available, otherwise CPU."""
+    """Load metric outdoor Depth Anything V2 on CUDA when available, else CPU."""
     try:
         import torch
         from transformers import pipeline
@@ -247,7 +221,9 @@ def annotate_and_extract(
     depth_map = None
     if depth_estimator is not None:
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        depth_result = depth_estimator(rgb_image)
+        # Transformers' image pipeline expects a PIL image (or path/URL), not
+        # the NumPy array returned by OpenCV.
+        depth_result = depth_estimator(Image.fromarray(rgb_image))
         depth_map = to_numpy_depth(depth_result, (image_width, image_height))
 
     results = model.predict(
@@ -314,12 +290,18 @@ def annotate_and_extract(
                 else None
             )
 
-            relative_depth = relative_box_depth(depth_map, (x1, y1, x2, y2)) if depth_map is not None else None
-            severity = classify_severity(width_cm, relative_depth)
+            estimated_depth_m = (
+                mask_apparent_depth_m(depth_map, instance_mask)
+                if depth_map is not None and mask_data is not None and detection_index < len(mask_data)
+                else None
+            )
+            severity = classify_severity(width_cm, estimated_depth_m)
 
             color = (40, 220, 40)
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-            label = f"pothole {confidence:.2f}"
+            label = f"pothole {confidence:.2f} {severity}"
+            if estimated_depth_m is not None:
+                label += f" ~{estimated_depth_m * 100:.1f}cm*"
             label_y = max(18, y1 - 7)
             cv2.putText(
                 annotated,
@@ -349,7 +331,7 @@ def annotate_and_extract(
                     "mask_area_cm2": f"{mask_area_cm2:.3f}" if mask_area_cm2 is not None else "",
                     "width_cm": f"{width_cm:.3f}" if width_cm is not None else "",
                     "height_cm": f"{height_cm:.3f}" if height_cm is not None else "",
-                    "relative_depth": f"{relative_depth:.6f}" if relative_depth is not None else "",
+                    "estimated_depth_m": f"{estimated_depth_m:.6f}" if estimated_depth_m is not None else "",
                     "severity": severity,
                     "annotated_image": str(annotated_path),
                 }
@@ -382,7 +364,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--depth",
         action="store_true",
-        help="Add Depth Anything V2 relative depth differences (not cm).",
+        help="Estimate mask-vs-nearby-road apparent depth with metric outdoor Depth Anything V2.",
     )
     parser.add_argument(
         "--ref_width_cm",
@@ -456,7 +438,7 @@ def main() -> int:
         print(f"Detected potholes: {total_potholes}")
         print(f"CSV: {csv_path}")
         if args.depth:
-            print("Depth values are relative model outputs, not centimeters; calibrate before interpreting physically.")
+            print("Depth is an experimental monocular estimate; validate against field measurements before operational use.")
         return 0
     except Exception as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)

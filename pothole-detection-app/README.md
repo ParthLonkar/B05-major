@@ -136,7 +136,7 @@ There is also a native Android client app in `pothole-android-app/` that uses th
 
 ## Run pretrained Hugging Face YOLOv8 segmentation on phone photos
 
-This inference-only script downloads `best.pt` from `keremberke/yolov8n-pothole-segmentation`, draws the predicted pothole masks and boxes, and writes annotated images and a CSV under `output/`. It does not train the model. The CSV includes both box area and mask area; optional Depth Anything V2 values remain relative, not physical depth.
+This inference-only script downloads `best.pt` from `keremberke/yolov8n-pothole-segmentation`, draws the predicted pothole masks and boxes, and writes annotated images and a CSV under `output/`. It does not train the model. The CSV includes box area and mask area. Optional depth uses `depth-anything/Depth-Anything-V2-Metric-Outdoor-Base-hf` and compares depth inside the YOLO mask with a nearby outside ring; it records an experimental apparent-depth estimate in meters and combines it with width thresholds for provisional severity.
 
 Install the Python dependencies from this folder:
 
@@ -154,7 +154,7 @@ python scripts\predict_hf_yolov8_seg.py path\to\road-photo.jpg
 python scripts\predict_hf_yolov8_seg.py path\to\photos --tta
 ```
 
-Add relative depth output (Depth Anything V2 Small; **not a measurement in cm**):
+Add metric outdoor depth analysis (the first run also downloads the depth model):
 
 ```powershell
 python scripts\predict_hf_yolov8_seg.py path\to\photos --depth
@@ -166,4 +166,4 @@ Convert box dimensions to approximate centimeters using a known-width reference 
 python scripts\predict_hf_yolov8_seg.py path\to\road-photo.jpg --ref_width_cm 10 --ref_width_px 125
 ```
 
-The default severity width thresholds in `scripts/predict_hf_yolov8_seg.py` are placeholders. Verify and calibrate them against ASTM D6433 or applicable local IRC/road-agency guidance before using severity as an operational decision. Reference-based dimensions and mask area are approximate and do not correct for perspective.
+The depth estimate is based on a single monocular image and can be affected by perspective, lighting, camera angle, and model error; the metric model's output does not guarantee accurate centimeter-level pothole depth. The initial depth severity thresholds (`DEPTH_MEDIUM_THRESHOLD_M` and `DEPTH_HIGH_THRESHOLD_M`) and width thresholds in `scripts/predict_hf_yolov8_seg.py` are editable starting values, not validated standards. Check them against field measurements and ASTM D6433 or applicable local IRC/road-agency guidance before operational use. Reference-based dimensions and mask area are approximate and do not correct for perspective.
