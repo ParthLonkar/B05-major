@@ -44,7 +44,7 @@ const getMarkerRadius = (status: string, baseSeverity: string): number => {
 
 const getMapCenter = (complaints: Complaint[]) => {
   if (complaints.length === 0) {
-    return [28.7041, 77.1025] as [number, number];
+    return [20.5937, 78.9629] as [number, number];
   }
 
   const total = complaints.reduce(
@@ -101,24 +101,14 @@ export const GoogleMapsHeatmap: React.FC<GoogleMapsHeatmapProps> = ({
 
   const center = useMemo(() => getMapCenter(filteredComplaints), [filteredComplaints]);
 
-  if (filteredComplaints.length === 0) {
-    return (
-      <div className="flex h-full flex-col gap-4 overflow-y-auto bg-slate-950 p-4 text-white">
-        <div className="rounded-[28px] border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
-          No complaint locations are available for the selected filters.
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-full w-full overflow-hidden rounded-[24px]">
-      <MapContainer center={center} zoom={7} scrollWheelZoom className="h-full w-full">
+    <div className="relative h-full w-full overflow-hidden rounded-[24px]">
+      <MapContainer center={center} zoom={filteredComplaints.length > 0 ? 7 : 5} scrollWheelZoom className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FitBounds complaints={filteredComplaints} />
+        {filteredComplaints.length > 0 && <FitBounds complaints={filteredComplaints} />}
         {filteredComplaints.map((complaint) => {
           const markerColor = getMarkerColor(complaint.status);
           const markerRadius = getMarkerRadius(complaint.status, complaint.severity);
@@ -153,6 +143,12 @@ export const GoogleMapsHeatmap: React.FC<GoogleMapsHeatmapProps> = ({
           );
         })}
       </MapContainer>
+      {filteredComplaints.length === 0 && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-[500] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-center shadow-lg backdrop-blur">
+          <p className="text-sm font-semibold text-slate-800">No report locations yet</p>
+          <p className="mt-1 text-xs text-slate-500">New geotagged complaints will appear here.</p>
+        </div>
+      )}
     </div>
   );
 };

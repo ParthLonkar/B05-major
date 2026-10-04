@@ -111,7 +111,7 @@ export const LoginPage: React.FC = () => {
         setUser(user, token);
 
         if (user.role === 'admin') {
-          navigate('/admin', { replace: true });
+          window.location.assign('/admin.html#/');
         } else {
           navigate('/report', { replace: true });
         }

@@ -35,7 +35,11 @@ axiosInstance.interceptors.response.use(
       localStorage.removeItem('user');
       localStorage.removeItem('authToken');
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.href = '/login';
+        if (window.location.pathname.endsWith('/admin.html')) {
+          window.location.hash = '/login';
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
     console.error('API Error:', error.response?.data || error.message);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { useToast } from './hooks/useToast';
 import { ToastContainer } from './components/ui/Toast';
@@ -13,7 +13,6 @@ import { HomePage } from './pages/HomePage';
 import { ReportComplaintPage } from './pages/ReportComplaintPage';
 import { TrackComplaintPage } from './pages/TrackComplaintPage';
 import { ImprovedHeatmapPage } from './pages/ImprovedHeatmapPage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { UserDashboardPage } from './pages/UserDashboardPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -22,10 +21,23 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+const AdminWebsiteRedirect: React.FC = () => {
+  React.useEffect(() => {
+    window.location.replace('/admin.html#/');
+  }, []);
+  return <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb] text-sm font-medium text-slate-500">Opening the admin website…</div>;
+};
+
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAppContext();
+  const location = useLocation();
   const { toasts, removeToast } = useToast();
   const landingPath = isAdmin ? '/home' : '/report';
+
+  // Keep admin operations in their own HTML entry instead of the citizen app shell.
+  if (location.pathname === '/admin') {
+    return <AdminWebsiteRedirect />;
+  }
 
   return (
     <AndroidPhoneFrame>
@@ -41,11 +53,6 @@ const AppContent: React.FC = () => {
             <Route path="/home" element={
               <ProtectedRoute>
                 {isAdmin ? <HomePage /> : <Navigate to="/report" replace />}
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute>
-                {isAdmin ? <AdminDashboardPage /> : <Navigate to="/report" replace />}
               </ProtectedRoute>
             } />
             <Route path="/report" element={
